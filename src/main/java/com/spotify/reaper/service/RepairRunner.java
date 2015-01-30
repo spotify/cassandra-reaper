@@ -145,7 +145,7 @@ public class RepairRunner implements Runnable {
           repairRunners.remove(repairRunId);
           break;
       }
-    } catch (ReaperException e) {
+    } catch (Exception e) {
       LOG.error("RepairRun FAILURE");
       e.printStackTrace();
       storage.updateRepairRun(repairRun.with()
