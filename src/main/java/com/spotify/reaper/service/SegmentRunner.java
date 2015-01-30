@@ -109,7 +109,9 @@ public final class SegmentRunner implements RepairStatusHandler {
         return;
       }
 
+      LOG.debug("Thread {} acquiring lock on condition {} in runRepair() on repair segment {}...", Thread.currentThread(), condition, segmentId);
       synchronized (condition) {
+        LOG.debug("Lock on condition {} acquired by thread {} in runRepair() on repair segment {}", condition, Thread.currentThread(), segmentId);
         commandId = coordinator.triggerRepair(segment.getStartToken(), segment.getEndToken(),
                                               keyspace, repairUnit.getRepairParallelism(),
                                               repairUnit.getColumnFamilies());
@@ -122,7 +124,9 @@ public final class SegmentRunner implements RepairStatusHandler {
                  segmentId, timeoutMillis);
 
         try {
+          LOG.debug("Thread {} awaiting signal on condition {} in runRepair() on repair segment {}...", Thread.currentThread(), condition, segmentId);
           condition.await(timeoutMillis, TimeUnit.MILLISECONDS);
+          LOG.debug("Signal received by thread {} on condition {} in runRepair() on repair segment {}", Thread.currentThread(), condition, segmentId);
         } catch (InterruptedException e) {
           LOG.warn("Repair command {} on segment {} interrupted", commandId, segmentId);
         } finally {
@@ -141,7 +145,9 @@ public final class SegmentRunner implements RepairStatusHandler {
             segmentRunners.remove(resultingSegment.getId());
           }
         }
+        LOG.debug("Letting go of lock on condition {} held by thread {} in runRepair() on repair segment {}...", condition, Thread.currentThread(), segmentId);
       }
+      LOG.debug("Thread {} released lock on condition {} in runRepair() on repair segment {}", Thread.currentThread(), condition, segmentId);
     } catch (ReaperException e) {
       LOG.warn("Failed to connect to a coordinator node for segment {}", segmentId);
       postpone(segment);
@@ -190,7 +196,9 @@ public final class SegmentRunner implements RepairStatusHandler {
    */
   @Override
   public void handle(int repairNumber, ActiveRepairService.Status status, String message) {
+    LOG.debug("Thread {} acquiring lock on condition {} in handle() on repair segment {}...", Thread.currentThread(), condition, segmentId);
     synchronized (condition) {
+      LOG.debug("Lock on condition {} acquired by thread {} in handle() on repair segment {}", condition, Thread.currentThread(), segmentId);
       LOG.debug(
           "handle called for repairCommandId {}, outcome {} and message: {}",
           repairNumber, status, message);
@@ -227,6 +235,8 @@ public final class SegmentRunner implements RepairStatusHandler {
           condition.signalAll();
           break;
       }
+      LOG.debug("Letting go of lock on condition {} held by thread {} in handle() on repair segment {}...", condition, Thread.currentThread(), segmentId);
     }
+    LOG.debug("Thread {} released lock on condition {} in handle() on repair segment {}", Thread.currentThread(), condition, segmentId);
   }
 }
