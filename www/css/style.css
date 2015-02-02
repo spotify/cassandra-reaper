@@ -1,0 +1,29 @@
+body {
+    background-color: black;
+    color: #999999;
+    font-family: "proxima_nova","Helvetica Neue",Helvetica,Arial,sans-serif;
+}
+
+table {
+    width: 1em;
+
+    max-width:97%;
+    margin: auto;
+    #border-collapse: collapse;
+    white-space: nowrap;
+    text-align: center;
+}
+
+table, tr {
+    border-spacing: 5px;
+    color: #999999;
+}
+th {
+    color: white;
+}
+
+progress {
+    width: 600px;
+    background-color: red;
+    height: 20px;
+}

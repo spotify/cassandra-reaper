@@ -15,6 +15,7 @@ package com.spotify.reaper;
 
 import com.spotify.reaper.cassandra.JmxConnectionFactory;
 import com.spotify.reaper.resources.ClusterResource;
+import com.spotify.reaper.resources.OverviewResource;
 import com.spotify.reaper.resources.PingResource;
 import com.spotify.reaper.resources.ReaperHealthCheck;
 import com.spotify.reaper.resources.RepairRunResource;
@@ -93,6 +94,9 @@ public class ReaperApplication extends Application<ReaperApplicationConfiguratio
 
     final RepairRunResource addRepairRunResource = new RepairRunResource(config, storage);
     environment.jersey().register(addRepairRunResource);
+
+    final OverviewResource overviewResource = new OverviewResource(storage);
+    environment.jersey().register(overviewResource);
 
     LOG.info("Reaper is ready to accept connections");
 
