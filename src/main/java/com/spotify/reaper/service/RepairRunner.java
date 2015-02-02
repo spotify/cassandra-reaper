@@ -184,9 +184,10 @@ public class RepairRunner implements Runnable {
     LOG.info("Repairs for repair run #{} done", repairRunId);
     RepairRun repairRun = storage.getRepairRun(repairRunId).get();
     boolean success = storage.updateRepairRun(repairRun.with()
-                                                  .runState(RepairRun.RunState.DONE)
-                                                  .endTime(DateTime.now())
-                                                  .build(repairRun.getId()));
+        .runState(RepairRun.RunState.DONE)
+        .endTime(DateTime.now())
+        .lastEvent("All done")
+        .build(repairRun.getId()));
     if (!success) {
       LOG.error("failed updating repair run " + repairRun.getId());
     }
@@ -264,7 +265,12 @@ public class RepairRunner implements Runnable {
         break;
       case DONE:
         // Successful repair
-        executor.schedule(this, intensityBasedDelayMillis(segment), TimeUnit.MILLISECONDS);
+        long delay = intensityBasedDelayMillis(segment);
+        executor.schedule(this, delay, TimeUnit.MILLISECONDS);
+        String event = String.format("Waiting %ds because of intensity based delay", delay / 1000);
+        RepairRun updatedRepairRun = storage.getRepairRun(repairRunId).get().with().lastEvent(event)
+            .build(repairRunId);
+        storage.updateRepairRun(updatedRepairRun);
         break;
       default:
         // Another thread has started a new repair on this segment already

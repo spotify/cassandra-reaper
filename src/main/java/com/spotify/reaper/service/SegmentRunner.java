@@ -21,6 +21,7 @@ import com.spotify.reaper.ReaperException;
 import com.spotify.reaper.cassandra.JmxConnectionFactory;
 import com.spotify.reaper.cassandra.JmxProxy;
 import com.spotify.reaper.cassandra.RepairStatusHandler;
+import com.spotify.reaper.core.RepairRun;
 import com.spotify.reaper.core.RepairSegment;
 import com.spotify.reaper.core.RepairUnit;
 import com.spotify.reaper.storage.IStorage;
@@ -99,12 +100,13 @@ public final class SegmentRunner implements RepairStatusHandler {
   private void runRepair(Collection<String> potentialCoordinators,
                          JmxConnectionFactory jmxConnectionFactory, long timeoutMillis) {
     final RepairSegment segment = storage.getRepairSegment(segmentId).get();
+    final RepairRun repairRun = storage.getRepairRun(segment.getRunId()).get();
     try (JmxProxy coordinator = jmxConnectionFactory
         .connectAny(Optional.<RepairStatusHandler>of(this), potentialCoordinators)) {
       RepairUnit repairUnit = storage.getRepairUnit(segment.getRepairUnitId()).get();
       String keyspace = repairUnit.getKeyspaceName();
 
-      if (!canRepair(segment, keyspace, coordinator, jmxConnectionFactory)) {
+      if (!canRepair(repairRun, segment, keyspace, coordinator, jmxConnectionFactory)) {
         postpone(segment);
         return;
       }
@@ -115,12 +117,14 @@ public final class SegmentRunner implements RepairStatusHandler {
                                               repairUnit.getColumnFamilies());
         LOG.debug("Triggered repair with command id {}", commandId);
         storage.updateRepairSegment(segment.with()
-                                        .coordinatorHost(coordinator.getHost())
-                                        .repairCommandId(commandId)
-                                        .build(segmentId));
-        LOG.info("Repair for segment {} started, status wait will timeout in {} millis",
-                 segmentId, timeoutMillis);
-
+            .coordinatorHost(coordinator.getHost())
+            .repairCommandId(commandId)
+            .build(segmentId));
+        String eventMsg = String.format("Triggered repair of segment %d via host %s",
+            segment.getId(), coordinator.getHost());
+        storage.updateRepairRun(repairRun.with().lastEvent(eventMsg).build(repairRun.getId()));
+        LOG.info("Repair for segment {} started, status wait will timeout in {} millis", segmentId,
+            timeoutMillis);
         try {
           condition.await(timeoutMillis, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
@@ -144,27 +148,35 @@ public final class SegmentRunner implements RepairStatusHandler {
       }
     } catch (ReaperException e) {
       LOG.warn("Failed to connect to a coordinator node for segment {}", segmentId);
+      String msg = String.format("Postponed because couldn't any of the coordinators");
+      storage.updateRepairRun(repairRun.with().lastEvent(msg).build(repairRun.getId()));
       postpone(segment);
     }
   }
 
-  boolean canRepair(RepairSegment segment, String keyspace, JmxProxy coordinator,
-                    JmxConnectionFactory factory) throws ReaperException {
+  boolean canRepair(RepairRun repairRun, RepairSegment segment, String keyspace,
+      JmxProxy coordinator, JmxConnectionFactory factory) throws ReaperException {
     Collection<String> allHosts =
         coordinator.tokenRangeToEndpoint(keyspace, segment.getTokenRange());
     for (String hostName : allHosts) {
       try (JmxProxy hostProxy = factory.connect(hostName)) {
         LOG.debug("checking host '{}' for pending compactions and other repairs (can repair?)"
                   + " Run id '{}'", hostName, segment.getRunId());
-        if (hostProxy.getPendingCompactions() > MAX_PENDING_COMPACTIONS) {
+        int pendingCompactions = hostProxy.getPendingCompactions();
+        if (pendingCompactions > MAX_PENDING_COMPACTIONS) {
           LOG.warn("SegmentRunner declined to repair segment {} because of too many pending "
                    + "compactions (> {}) on host \"{}\"", segmentId, MAX_PENDING_COMPACTIONS,
                    hostProxy.getHost());
+          String msg = String.format("Postponed due to pending compactions (%d)",
+              pendingCompactions);
+          storage.updateRepairRun(repairRun.with().lastEvent(msg).build(repairRun.getId()));
           return false;
         }
         if (hostProxy.isRepairRunning()) {
           LOG.warn("SegmentRunner declined to repair segment {} because one of the hosts ({}) was "
                    + "already involved in a repair", segmentId, hostProxy.getHost());
+          String msg = String.format("Postponed due to affected hosts already doing repairs");
+          storage.updateRepairRun(repairRun.with().lastEvent(msg).build(repairRun.getId()));
           return false;
         }
       }
