@@ -75,6 +75,9 @@ public class RepairRunStatus {
   @JsonProperty("segments_repaired")
   private int segmentsRepaired = 0;
 
+  @JsonProperty("last_event")
+  private final String lastEvent;
+
   public RepairRunStatus(RepairRun repairRun, RepairUnit repairUnit) {
     this.id = repairRun.getId();
     this.cause = repairRun.getCause();
@@ -90,6 +93,7 @@ public class RepairRunStatus {
     this.intensity = Math.round(repairRun.getIntensity() * 10000) / 10000;
     this.segmentCount = repairUnit.getSegmentCount();
     this.repairParallelism = repairUnit.getRepairParallelism().name().toLowerCase();
+    this.lastEvent = repairRun.getLastEvent();
   }
 
   @JsonProperty("creation_time")
