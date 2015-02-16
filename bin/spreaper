@@ -462,7 +462,7 @@ class ReaperCLI(object):
 
     def _change_run_state(self, reaper, run_id, args, st):
         print "# Starting a repair run with id: {0}".format(run_id)
-        reaper.put("repair_run/{0}".format(run_id), owner=args.owner, cause=args.cause, state=st)
+        reaper.put("repair_run/{0}".format(run_id), owner=hasattr(args, 'owner') and args.owner or USER, cause=args.cause, state=st)
         print "# Run '{0}' started".format(run_id)
 
 
