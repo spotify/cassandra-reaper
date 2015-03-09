@@ -14,7 +14,7 @@
 package com.spotify.reaper;
 
 import com.google.common.annotations.VisibleForTesting;
-
+import com.google.common.io.CharStreams;
 import com.spotify.reaper.cassandra.JmxConnectionFactory;
 import com.spotify.reaper.resources.ClusterResource;
 import com.spotify.reaper.resources.PingResource;
@@ -29,17 +29,27 @@ import com.spotify.reaper.storage.PostgresStorage;
 
 import org.apache.cassandra.repair.RepairParallelism;
 import org.joda.time.DateTimeZone;
+import org.skife.jdbi.v2.DBI;
+import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.exceptions.UnableToCreateStatementException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import sun.misc.Signal;
 import sun.misc.SignalHandler;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.net.URL;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import io.dropwizard.Application;
+import io.dropwizard.jdbi.DBIFactory;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 
@@ -151,7 +161,43 @@ public class ReaperApplication extends Application<ReaperApplicationConfiguratio
     if ("memory".equalsIgnoreCase(config.getStorageType())) {
       storage = new MemoryStorage();
     } else if ("database".equalsIgnoreCase(config.getStorageType())) {
-      storage = new PostgresStorage(config, environment);
+      
+      // create DBI instance
+      DBI jdbi;
+      try {
+        final DBIFactory factory = new DBIFactory();
+        jdbi = factory.build(environment, config.getDataSourceFactory(), "postgresql");
+      } catch (ClassNotFoundException ex) {
+        LOG.error("failed creating database connection: {}", ex);
+        throw new ReaperException(ex);
+      }
+      
+      // instanciate store
+      storage = new PostgresStorage(jdbi);
+      
+      // init H2 database upon first run
+      if(config.getDataSourceFactory().getDriverClass().equals("org.h2.Driver")) {
+        try {
+          storage.getClusters();
+        } catch(UnableToCreateStatementException e) {
+          LOG.info("Initializing H2 database: " + config.getDataSourceFactory().getUrl());
+          
+          try {
+            InputStream is = getClass().getResource("/db/reaper_h2.sql").openStream();
+            String sql;
+            try(Reader reader = new InputStreamReader(is)) {
+              sql = CharStreams.toString(reader);
+            }
+            try (Handle h = jdbi.open()) {
+              h.execute(sql);
+            }             
+          } catch (IOException e2) {
+            throw new ReaperException("Failed to initialize database", e2);
+          }
+          
+        }
+      }
+      
     } else {
       LOG.error("invalid storageType: {}", config.getStorageType());
       throw new ReaperException("invalid storage type: " + config.getStorageType());
