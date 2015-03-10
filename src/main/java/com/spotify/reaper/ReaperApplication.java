@@ -14,7 +14,7 @@
 package com.spotify.reaper;
 
 import com.google.common.annotations.VisibleForTesting;
-
+import com.spotify.reaper.ReaperApplicationConfiguration.JmxCredentials;
 import com.spotify.reaper.cassandra.JmxConnectionFactory;
 import com.spotify.reaper.resources.ClusterResource;
 import com.spotify.reaper.resources.PingResource;
@@ -119,6 +119,12 @@ public class ReaperApplication extends Application<ReaperApplicationConfiguratio
       context.jmxConnectionFactory.setJmxPorts(jmxPorts);
     }
 
+    JmxCredentials jmxAuth = config.getJmxAuth();
+    if (jmxAuth != null) {
+      LOG.debug("using specified JMX credentials for authentication");
+      context.jmxConnectionFactory.setJmxAuth(jmxAuth);
+    }
+    
     LOG.info("creating and registering health checks");
     // Notice that health checks are registered under the admin application on /healthcheck
     final ReaperHealthCheck healthCheck = new ReaperHealthCheck(context);
