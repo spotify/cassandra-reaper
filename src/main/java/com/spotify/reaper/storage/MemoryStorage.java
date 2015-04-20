@@ -13,6 +13,7 @@
  */
 package com.spotify.reaper.storage;
 
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -50,6 +51,7 @@ public class MemoryStorage implements IStorage {
 
   private final ConcurrentMap<String, Cluster> clusters = Maps.newConcurrentMap();
   private final ConcurrentMap<Long, RepairRun> repairRuns = Maps.newConcurrentMap();
+  private final ConcurrentMap<Long, Object> repairRunLocks = Maps.newConcurrentMap();
   private final ConcurrentMap<Long, RepairUnit> repairUnits = Maps.newConcurrentMap();
   private final ConcurrentMap<RepairUnitKey, RepairUnit> repairUnitsByKey = Maps.newConcurrentMap();
   private final ConcurrentMap<Long, RepairSegment> repairSegments = Maps.newConcurrentMap();
@@ -102,9 +104,11 @@ public class MemoryStorage implements IStorage {
   public RepairRun addRepairRun(RepairRun.Builder repairRun) {
     RepairRun newRepairRun = repairRun.build(REPAIR_RUN_ID.incrementAndGet());
     repairRuns.put(newRepairRun.getId(), newRepairRun);
+    repairRunLocks.put(newRepairRun.getId(), new Object());
     return newRepairRun;
   }
 
+  @Deprecated
   @Override
   public boolean updateRepairRun(RepairRun repairRun) {
     if (!getRepairRun(repairRun.getId()).isPresent()) {
@@ -112,6 +116,39 @@ public class MemoryStorage implements IStorage {
     } else {
       repairRuns.put(repairRun.getId(), repairRun);
       return true;
+    }
+  }
+
+  @Override
+  public boolean modifyRepairRun(long id,
+      Function<RepairRun.Builder, RepairRun.Builder> modification) {
+    if (!repairRunLocks.containsKey(id)) {
+      return false;
+    } else synchronized (repairRunLocks.get(id)) {
+      RepairRun repairRun = repairRuns.get(id);
+      if (repairRun == null) {
+        return false;
+      } else {
+        repairRuns.put(id, modification.apply(repairRun.with()).build(id));
+        return true;
+      }
+    }
+  }
+
+  @Override
+  public Optional<RepairRun> deleteRepairRun(long id) {
+    if (!repairRunLocks.containsKey(id)) {
+      return Optional.absent();
+    } else synchronized (repairRunLocks.get(id)) {
+      RepairRun deletedRun = repairRuns.remove(id);
+      if (deletedRun != null) {
+        if (getSegmentAmountForRepairRunWithState(id, RepairSegment.State.RUNNING) == 0) {
+          deleteRepairUnit(deletedRun.getRepairUnitId());
+          deleteRepairSegmentsForRun(id);
+          deletedRun = deletedRun.with().runState(RepairRun.RunState.DELETED).build(id);
+        }
+      }
+      return Optional.fromNullable(deletedRun);
     }
   }
 
@@ -191,19 +228,6 @@ public class MemoryStorage implements IStorage {
       }
     }
     return segmentsMap != null ? segmentsMap.size() : 0;
-  }
-
-  @Override
-  public Optional<RepairRun> deleteRepairRun(long id) {
-    RepairRun deletedRun = repairRuns.remove(id);
-    if (deletedRun != null) {
-      if (getSegmentAmountForRepairRunWithState(id, RepairSegment.State.RUNNING) == 0) {
-        deleteRepairUnit(deletedRun.getRepairUnitId());
-        deleteRepairSegmentsForRun(id);
-        deletedRun = deletedRun.with().runState(RepairRun.RunState.DELETED).build(id);
-      }
-    }
-    return Optional.fromNullable(deletedRun);
   }
 
   @Override
