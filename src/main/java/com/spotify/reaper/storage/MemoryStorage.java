@@ -51,7 +51,6 @@ public class MemoryStorage implements IStorage {
 
   private final ConcurrentMap<String, Cluster> clusters = Maps.newConcurrentMap();
   private final ConcurrentMap<Long, RepairRun> repairRuns = Maps.newConcurrentMap();
-  private final ConcurrentMap<Long, Object> repairRunLocks = Maps.newConcurrentMap();
   private final ConcurrentMap<Long, RepairUnit> repairUnits = Maps.newConcurrentMap();
   private final ConcurrentMap<RepairUnitKey, RepairUnit> repairUnitsByKey = Maps.newConcurrentMap();
   private final ConcurrentMap<Long, RepairSegment> repairSegments = Maps.newConcurrentMap();
@@ -104,7 +103,6 @@ public class MemoryStorage implements IStorage {
   public RepairRun addRepairRun(RepairRun.Builder repairRun) {
     RepairRun newRepairRun = repairRun.build(REPAIR_RUN_ID.incrementAndGet());
     repairRuns.put(newRepairRun.getId(), newRepairRun);
-    repairRunLocks.put(newRepairRun.getId(), new Object());
     return newRepairRun;
   }
 
@@ -119,12 +117,18 @@ public class MemoryStorage implements IStorage {
     }
   }
 
+  private final ConcurrentMap<Long, Object> repairRunLocks = Maps.newConcurrentMap();
+
+  private Object getRepairRunLock(long id) {
+    Object newLock = new Object();
+    Object existingLock = repairRunLocks.putIfAbsent(id, newLock);
+    return existingLock != null ? existingLock : newLock;
+  }
+
   @Override
   public boolean modifyRepairRun(long id,
       Function<RepairRun.Builder, RepairRun.Builder> modification) {
-    if (!repairRunLocks.containsKey(id)) {
-      return false;
-    } else synchronized (repairRunLocks.get(id)) {
+    synchronized (getRepairRunLock(id)) {
       RepairRun repairRun = repairRuns.get(id);
       if (repairRun == null) {
         return false;
@@ -137,9 +141,7 @@ public class MemoryStorage implements IStorage {
 
   @Override
   public Optional<RepairRun> deleteRepairRun(long id) {
-    if (!repairRunLocks.containsKey(id)) {
-      return Optional.absent();
-    } else synchronized (repairRunLocks.get(id)) {
+    synchronized (getRepairRunLock(id)) {
       RepairRun deletedRun = repairRuns.remove(id);
       if (deletedRun != null) {
         if (getSegmentAmountForRepairRunWithState(id, RepairSegment.State.RUNNING) == 0) {

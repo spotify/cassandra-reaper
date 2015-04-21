@@ -199,16 +199,9 @@ public class PostgresStorage implements IStorage {
   private final ConcurrentMap<Long, Object> repairRunLocks = Maps.newConcurrentMap();
 
   private Object getRepairRunLock(long id) {
-    Object lock = repairRunLocks.get(id);
-    if (lock == null) {
-      lock = new Object();
-      Object existingLock = repairRunLocks.putIfAbsent(id, lock);
-      if (existingLock != null) {
-        // Another thread inserted a lock here right before us.
-        return existingLock;
-      }
-    }
-    return lock;
+    Object newLock = new Object();
+    Object existingLock = repairRunLocks.putIfAbsent(id, newLock);
+    return existingLock != null ? existingLock : newLock;
   }
 
   @Override
