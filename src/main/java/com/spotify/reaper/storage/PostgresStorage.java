@@ -208,8 +208,12 @@ public class PostgresStorage implements IStorage {
   public boolean modifyRepairRun(long id,
       Function<RepairRun.Builder, RepairRun.Builder> modification) {
     synchronized (getRepairRunLock(id)) {
-      RepairRun repairRun = getRepairRun(id).get();
-      return updateRepairRun(modification.apply(repairRun.with()).build(id));
+      Optional<RepairRun> repairRun = getRepairRun(id);
+      if (!repairRun.isPresent()) {
+        return false;
+      } else {
+        return updateRepairRun(modification.apply(repairRun.get().with()).build(id));
+      }
     }
   }
 
