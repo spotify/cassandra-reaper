@@ -191,19 +191,19 @@ public class RepairRunnerTest {
     long cf = storage.addRepairUnit(
         new RepairUnit.Builder(CLUSTER_NAME, KS_NAME, CF_NAMES)).getId();
     DateTimeUtils.setCurrentMillisFixed(TIME_RUN);
-    RepairRun run = storage.addRepairRun(
+    long runId = storage.addRepairRun(
         new RepairRun.Builder(CLUSTER_NAME, cf, DateTime.now(), INTENSITY, 1,
-                              RepairParallelism.PARALLEL));
+            RepairParallelism.PARALLEL)).getId();
     storage.addRepairSegments(Lists.newArrayList(
-        new RepairSegment.Builder(run.getId(), new RingRange(BigInteger.ZERO, BigInteger.ONE), cf)
+        new RepairSegment.Builder(runId, new RingRange(BigInteger.ZERO, BigInteger.ONE), cf)
             .state(RepairSegment.State.RUNNING).startTime(DateTime.now()).coordinatorHost("reaper")
             .repairCommandId(1337),
-        new RepairSegment.Builder(run.getId(), new RingRange(BigInteger.ONE, BigInteger.ZERO), cf)
-    ), run.getId());
-    final long RUN_ID = run.getId();
-    final long SEGMENT_ID = storage.getNextFreeSegment(run.getId()).get().getId();
+        new RepairSegment.Builder(runId, new RingRange(BigInteger.ONE, BigInteger.ZERO), cf)
+    ), runId);
+    final long SEGMENT_ID = storage.getNextFreeSegment(runId).get().getId();
 
-    context.repairManager.initializeThreadPool(1, 500, TimeUnit.MILLISECONDS, 1, TimeUnit.MILLISECONDS);
+    context.repairManager.initializeThreadPool(1, 500, TimeUnit.MILLISECONDS, 1,
+        TimeUnit.MILLISECONDS);
 
     assertEquals(storage.getRepairSegment(SEGMENT_ID).get().getState(),
                  RepairSegment.State.NOT_STARTED);
@@ -240,13 +240,18 @@ public class RepairRunnerTest {
       }
     };
 
-    assertEquals(RepairRun.RunState.NOT_STARTED, storage.getRepairRun(RUN_ID).get().getRunState());
+    assertEquals(RepairRun.RunState.NOT_STARTED, storage.getRepairRun(runId).get().getRunState());
     context.repairManager.resumeRunningRepairRuns(context);
-    assertEquals(RepairRun.RunState.NOT_STARTED, storage.getRepairRun(RUN_ID).get().getRunState());
-    storage.updateRepairRun(run.with().runState(RepairRun.RunState.RUNNING).build(RUN_ID));
+    assertEquals(RepairRun.RunState.NOT_STARTED, storage.getRepairRun(runId).get().getRunState());
+    storage.modifyRepairRun(runId, new Function<RepairRun.Builder, RepairRun.Builder>() {
+      @Override
+      public RepairRun.Builder apply(RepairRun.Builder original) {
+        return original.runState(RepairRun.RunState.RUNNING);
+      }
+    });
     context.repairManager.resumeRunningRepairRuns(context);
     Thread.sleep(100);
-    assertEquals(RepairRun.RunState.DONE, storage.getRepairRun(RUN_ID).get().getRunState());
+    assertEquals(RepairRun.RunState.DONE, storage.getRepairRun(runId).get().getRunState());
   }
 
   @Test
