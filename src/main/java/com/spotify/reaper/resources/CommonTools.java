@@ -157,12 +157,6 @@ public class CommonTools {
       repairSegmentBuilders.add(repairSegment);
     }
     context.storage.addRepairSegments(repairSegmentBuilders, repairRun.getId());
-    if (repairRun.getSegmentCount() != tokenSegments.size()) {
-      LOG.debug("created segment amount differs from expected default {} != {}",
-                repairRun.getSegmentCount(), tokenSegments.size());
-      context.storage.updateRepairRun(
-          repairRun.with().segmentCount(tokenSegments.size()).build(repairRun.getId()));
-    }
   }
 
   /**
