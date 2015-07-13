@@ -13,6 +13,7 @@
  */
 package com.spotify.reaper.storage;
 
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -105,6 +106,7 @@ public class MemoryStorage implements IStorage {
     return newRepairRun;
   }
 
+  @Deprecated
   @Override
   public boolean updateRepairRun(RepairRun repairRun) {
     if (!getRepairRun(repairRun.getId()).isPresent()) {
@@ -112,6 +114,43 @@ public class MemoryStorage implements IStorage {
     } else {
       repairRuns.put(repairRun.getId(), repairRun);
       return true;
+    }
+  }
+
+  private final ConcurrentMap<Long, Object> repairRunLocks = Maps.newConcurrentMap();
+
+  private Object getRepairRunLock(long id) {
+    Object newLock = new Object();
+    Object existingLock = repairRunLocks.putIfAbsent(id, newLock);
+    return existingLock != null ? existingLock : newLock;
+  }
+
+  @Override
+  public boolean modifyRepairRun(long id,
+      Function<RepairRun.Builder, RepairRun.Builder> modification) {
+    synchronized (getRepairRunLock(id)) {
+      RepairRun repairRun = repairRuns.get(id);
+      if (repairRun == null) {
+        return false;
+      } else {
+        repairRuns.put(id, modification.apply(repairRun.with()).build(id));
+        return true;
+      }
+    }
+  }
+
+  @Override
+  public Optional<RepairRun> deleteRepairRun(long id) {
+    synchronized (getRepairRunLock(id)) {
+      RepairRun deletedRun = repairRuns.remove(id);
+      if (deletedRun != null) {
+        if (getSegmentAmountForRepairRunWithState(id, RepairSegment.State.RUNNING) == 0) {
+          deleteRepairUnit(deletedRun.getRepairUnitId());
+          deleteRepairSegmentsForRun(id);
+          deletedRun = deletedRun.with().runState(RepairRun.RunState.DELETED).build(id);
+        }
+      }
+      return Optional.fromNullable(deletedRun);
     }
   }
 
@@ -191,19 +230,6 @@ public class MemoryStorage implements IStorage {
       }
     }
     return segmentsMap != null ? segmentsMap.size() : 0;
-  }
-
-  @Override
-  public Optional<RepairRun> deleteRepairRun(long id) {
-    RepairRun deletedRun = repairRuns.remove(id);
-    if (deletedRun != null) {
-      if (getSegmentAmountForRepairRunWithState(id, RepairSegment.State.RUNNING) == 0) {
-        deleteRepairUnit(deletedRun.getRepairUnitId());
-        deleteRepairSegmentsForRun(id);
-        deletedRun = deletedRun.with().runState(RepairRun.RunState.DELETED).build(id);
-      }
-    }
-    return Optional.fromNullable(deletedRun);
   }
 
   @Override

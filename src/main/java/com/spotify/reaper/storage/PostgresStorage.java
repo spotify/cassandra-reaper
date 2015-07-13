@@ -13,8 +13,10 @@
  */
 package com.spotify.reaper.storage;
 
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 import com.spotify.reaper.ReaperApplicationConfiguration;
 import com.spotify.reaper.ReaperException;
@@ -45,6 +47,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
 
 import io.dropwizard.jdbi.DBIFactory;
 import io.dropwizard.setup.Environment;
@@ -190,43 +193,69 @@ public class PostgresStorage implements IStorage {
     return result == null ? Lists.<RepairRun>newArrayList() : result;
   }
 
+
+  // Bj0rn: I don't quite like using this synchronization approach in the postgres storage.
+  //        could transactions solve it in a better way?
+  private final ConcurrentMap<Long, Object> repairRunLocks = Maps.newConcurrentMap();
+
+  private Object getRepairRunLock(long id) {
+    Object newLock = new Object();
+    Object existingLock = repairRunLocks.putIfAbsent(id, newLock);
+    return existingLock != null ? existingLock : newLock;
+  }
+
+  @Override
+  public boolean modifyRepairRun(long id,
+      Function<RepairRun.Builder, RepairRun.Builder> modification) {
+    synchronized (getRepairRunLock(id)) {
+      Optional<RepairRun> repairRun = getRepairRun(id);
+      if (!repairRun.isPresent()) {
+        return false;
+      } else {
+        return updateRepairRun(modification.apply(repairRun.get().with()).build(id));
+      }
+    }
+  }
+
   @Override
   public Optional<RepairRun> deleteRepairRun(long id) {
-    RepairRun result = null;
-    Handle h = null;
-    try {
-      h = jdbi.open();
-      h.begin();
-      IStoragePostgreSQL pg = getPostgresStorage(h);
-      RepairRun runToDelete = pg.getRepairRun(id);
-      if (runToDelete != null) {
-        int segmentsRunning = pg.getSegmentAmountForRepairRunWithState(id,
-            RepairSegment.State.RUNNING);
-        if (segmentsRunning == 0) {
-          pg.deleteRepairSegmentsForRun(runToDelete.getId());
-          pg.deleteRepairRun(id);
-          result = runToDelete.with().runState(RepairRun.RunState.DELETED).build(id);
-        } else {
-          LOG.warn("not deleting RepairRun \"{}\" as it has segments running: {}",
-                   id, segmentsRunning);
+    synchronized (getRepairRunLock(id)) {
+      RepairRun result = null;
+      Handle h = null;
+      try {
+        h = jdbi.open();
+        h.begin();
+        IStoragePostgreSQL pg = getPostgresStorage(h);
+        RepairRun runToDelete = pg.getRepairRun(id);
+        if (runToDelete != null) {
+          int segmentsRunning = pg.getSegmentAmountForRepairRunWithState(id,
+              RepairSegment.State.RUNNING);
+          if (segmentsRunning == 0) {
+            pg.deleteRepairSegmentsForRun(runToDelete.getId());
+            pg.deleteRepairRun(id);
+            result = runToDelete.with().runState(RepairRun.RunState.DELETED).build(id);
+          } else {
+            LOG.warn("not deleting RepairRun \"{}\" as it has segments running: {}",
+                id, segmentsRunning);
+          }
+        }
+        h.commit();
+      } catch (DBIException ex) {
+        LOG.warn("DELETE failed", ex);
+        ex.printStackTrace();
+        if (h != null) {
+          h.rollback();
+        }
+      } finally {
+        if (h != null) {
+          h.close();
         }
       }
-      h.commit();
-    } catch (DBIException ex) {
-      LOG.warn("DELETE failed", ex);
-      ex.printStackTrace();
-      if (h != null) {
-        h.rollback();
+      if (result != null) {
+        tryDeletingRepairUnit(result.getRepairUnitId());
       }
-    } finally {
-      if (h != null) {
-        h.close();
-      }
+      return Optional.fromNullable(result);
     }
-    if (result != null) {
-      tryDeletingRepairUnit(result.getRepairUnitId());
-    }
-    return Optional.fromNullable(result);
   }
 
   private void tryDeletingRepairUnit(long id) {
@@ -251,6 +280,7 @@ public class PostgresStorage implements IStorage {
     return result;
   }
 
+  @Deprecated
   @Override
   public boolean updateRepairRun(RepairRun repairRun) {
     boolean result = false;

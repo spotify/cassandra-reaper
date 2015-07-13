@@ -13,6 +13,7 @@
  */
 package com.spotify.reaper.storage;
 
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
 
 import com.spotify.reaper.core.Cluster;
@@ -55,7 +56,10 @@ public interface IStorage {
 
   RepairRun addRepairRun(RepairRun.Builder repairRun);
 
+  @Deprecated
   boolean updateRepairRun(RepairRun repairRun);
+
+  boolean modifyRepairRun(long id, Function<RepairRun.Builder, RepairRun.Builder> modification);
 
   Optional<RepairRun> getRepairRun(long id);
 
