@@ -59,18 +59,18 @@ public interface IStoragePostgreSQL {
   //
   static final String SQL_REPAIR_RUN_ALL_FIELDS_NO_ID =
       "cluster_name, repair_unit_id, cause, owner, state, creation_time, "
-      + "start_time, end_time, pause_time, intensity, last_event, "
+      + "start_time, end_time, days_to_expire_after_done, pause_time, intensity, last_event, "
       + "segment_count, repair_parallelism";
   static final String SQL_REPAIR_RUN_ALL_FIELDS =
       "repair_run.id, " + SQL_REPAIR_RUN_ALL_FIELDS_NO_ID;
   static final String SQL_INSERT_REPAIR_RUN =
       "INSERT INTO repair_run (" + SQL_REPAIR_RUN_ALL_FIELDS_NO_ID + ") VALUES "
       + "(:clusterName, :repairUnitId, :cause, :owner, :runState, :creationTime, "
-      + ":startTime, :endTime, :pauseTime, :intensity, :lastEvent, :segmentCount, "
+      + ":startTime, :endTime, :daysToExpireAfterDone, :pauseTime, :intensity, :lastEvent, :segmentCount, "
       + ":repairParallelism)";
   static final String SQL_UPDATE_REPAIR_RUN =
       "UPDATE repair_run SET cause = :cause, owner = :owner, state = :runState, "
-      + "start_time = :startTime, end_time = :endTime, pause_time = :pauseTime, "
+      + "start_time = :startTime, end_time = :endTime, days_to_expire_after_done = :daysToExpireAfterDone, pause_time = :pauseTime, "
       + "intensity = :intensity, last_event = :lastEvent, segment_count = :segmentCount, "
       + "repair_parallelism = :repairParallelism WHERE id = :id";
   static final String SQL_GET_REPAIR_RUN =
@@ -144,24 +144,30 @@ public interface IStoragePostgreSQL {
   //
   static final String SQL_REPAIR_SCHEDULE_ALL_FIELDS_NO_ID =
       "repair_unit_id, state, days_between, next_activation, run_history, segment_count, "
-      + "repair_parallelism, intensity, creation_time, owner, pause_time";
+      + "repair_parallelism, intensity, creation_time, owner, pause_time, days_to_expire_after_done";
   static final String SQL_REPAIR_SCHEDULE_ALL_FIELDS =
       "repair_schedule.id, " + SQL_REPAIR_SCHEDULE_ALL_FIELDS_NO_ID;
   static final String SQL_INSERT_REPAIR_SCHEDULE =
       "INSERT INTO repair_schedule (" + SQL_REPAIR_SCHEDULE_ALL_FIELDS_NO_ID + ") VALUES "
       + "(:repairUnitId, :state, :daysBetween, :nextActivation, :runHistorySQL, :segmentCount, "
-      + ":repairParallelism, :intensity, :creationTime, :owner, :pauseTime)";
+      + ":repairParallelism, :intensity, :creationTime, :owner, :pauseTime, :daysToExpireAfterDone)";
   static final String SQL_UPDATE_REPAIR_SCHEDULE =
       "UPDATE repair_schedule SET repair_unit_id = :repairUnitId, state = :state, "
       + "days_between = :daysBetween, next_activation = :nextActivation, "
       + "run_history = :runHistorySQL, segment_count = :segmentCount, "
       + "repair_parallelism = :repairParallelism, creation_time = :creationTime, owner = :owner, "
-      + "pause_time = :pauseTime WHERE id = :id";
+      + "pause_time = :pauseTime , days_to_expire_after_done = :daysToExpireAfterDone WHERE id = :id";
   static final String SQL_GET_REPAIR_SCHEDULE =
       "SELECT " + SQL_REPAIR_SCHEDULE_ALL_FIELDS + " FROM repair_schedule WHERE id = :id";
   static final String SQL_GET_REPAIR_SCHEDULES_FOR_CLUSTER =
       "SELECT " + SQL_REPAIR_SCHEDULE_ALL_FIELDS + " FROM repair_schedule, repair_unit "
       + "WHERE repair_schedule.repair_unit_id = repair_unit.id AND cluster_name = :clusterName";
+  static final String SQL_GET_REPAIR_SCHEDULES_FOR_KEYSPACE =
+	      "SELECT " + SQL_REPAIR_SCHEDULE_ALL_FIELDS + " FROM repair_schedule, repair_unit "
+	      + "WHERE repair_schedule.repair_unit_id = repair_unit.id AND keyspace_name = :keyspaceName";
+  static final String SQL_GET_REPAIR_SCHEDULES_FOR_CLUSTER_AND_KEYSPACE =
+	      "SELECT " + SQL_REPAIR_SCHEDULE_ALL_FIELDS + " FROM repair_schedule, repair_unit "
+	      + "WHERE repair_schedule.repair_unit_id = repair_unit.id AND cluster_name = :clusterName AND keyspace_name = :keyspaceName";
   static final String SQL_GET_ALL_REPAIR_SCHEDULES =
       "SELECT " + SQL_REPAIR_SCHEDULE_ALL_FIELDS + " FROM repair_schedule";
   static final String SQL_DELETE_REPAIR_SCHEDULE = "DELETE FROM repair_schedule WHERE id = :id";
@@ -183,7 +189,7 @@ public interface IStoragePostgreSQL {
           + "(SELECT COUNT(*) FROM repair_segment WHERE run_id = repair_run.id) AS segments_total, "
           + "repair_run.state, repair_run.start_time, "
           + "repair_run.end_time, cause, owner, last_event, "
-          + "creation_time, pause_time, intensity, repair_parallelism "
+          + "creation_time, pause_time, days_to_expire_after_done, intensity, repair_parallelism "
           + "FROM repair_run "
           + "JOIN repair_unit ON repair_unit_id = repair_unit.id "
           + "WHERE repair_unit.cluster_name = :clusterName "
@@ -192,7 +198,7 @@ public interface IStoragePostgreSQL {
 
   static final String SQL_CLUSTER_SCHEDULE_OVERVIEW =
       "SELECT repair_schedule.id, owner, cluster_name, keyspace_name, column_families, state, "
-          + "creation_time, next_activation, pause_time, intensity, segment_count, "
+          + "creation_time, next_activation, pause_time, days_to_expire_after_done, intensity, segment_count, "
           + "repair_parallelism, days_between "
           + "FROM repair_schedule "
           + "JOIN repair_unit ON repair_unit_id = repair_unit.id "
@@ -313,10 +319,21 @@ public interface IStoragePostgreSQL {
   @SqlUpdate(SQL_UPDATE_REPAIR_SCHEDULE)
   public int updateRepairSchedule(@BindBean RepairSchedule newRepairSchedule);
 
+  @SqlQuery(SQL_GET_REPAIR_SCHEDULES_FOR_CLUSTER_AND_KEYSPACE)
+  @Mapper(RepairScheduleMapper.class)
+  public Collection<RepairSchedule> getRepairSchedulesForClusterAndKeySpace(
+      @Bind("clusterName") String clusterName,
+      @Bind("keyspaceName") String keyspaceName);
+
   @SqlQuery(SQL_GET_REPAIR_SCHEDULES_FOR_CLUSTER)
   @Mapper(RepairScheduleMapper.class)
   public Collection<RepairSchedule> getRepairSchedulesForCluster(
       @Bind("clusterName") String clusterName);
+
+  @SqlQuery(SQL_GET_REPAIR_SCHEDULES_FOR_KEYSPACE)
+  @Mapper(RepairScheduleMapper.class)
+  public Collection<RepairSchedule> getRepairSchedulesForKeyspace(
+      @Bind("keyspaceName") String keyspaceName);
 
   @SqlQuery(SQL_GET_ALL_REPAIR_SCHEDULES)
   @Mapper(RepairScheduleMapper.class)

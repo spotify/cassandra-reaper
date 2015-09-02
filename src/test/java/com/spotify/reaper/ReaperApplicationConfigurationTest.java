@@ -35,6 +35,8 @@ public class ReaperApplicationConfigurationTest {
     config.setRepairRunThreadCount(1);
     config.setSegmentCount(1);
     config.setStorageType("foo");
+    config.setScheduleDaysBetween(1);
+    config.setDaysToExpireAfterDone(2);
   }
 
   @Test

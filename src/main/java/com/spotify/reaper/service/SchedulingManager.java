@@ -169,7 +169,7 @@ public class SchedulingManager extends TimerTask {
     Cluster cluster = context.storage.getCluster(repairUnit.getClusterName()).get();
     RepairRun newRepairRun = CommonTools.registerRepairRun(
         context, cluster, repairUnit, Optional.of("scheduled run"),
-        schedule.getOwner(), schedule.getSegmentCount(), schedule.getRepairParallelism(),
+        schedule.getOwner(), schedule.getSegmentCount(), schedule.getDaysToExpireAfterDone(), schedule.getRepairParallelism(),
         schedule.getIntensity());
     context.repairManager.startRepairRun(context, newRepairRun);
     return newRepairRun;

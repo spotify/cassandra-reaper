@@ -23,6 +23,7 @@ import com.spotify.reaper.resources.ReaperHealthCheck;
 import com.spotify.reaper.resources.RepairRunResource;
 import com.spotify.reaper.resources.RepairScheduleResource;
 import com.spotify.reaper.service.RepairManager;
+import com.spotify.reaper.service.RepairRunCleaner;
 import com.spotify.reaper.service.SchedulingManager;
 import com.spotify.reaper.storage.IStorage;
 import com.spotify.reaper.storage.MemoryStorage;
@@ -163,6 +164,7 @@ public class ReaperApplication extends Application<ReaperApplicationConfiguratio
     Thread.sleep(1000);
 
     SchedulingManager.start(context);
+    RepairRunCleaner.start(context);
 
     LOG.info("resuming pending repair runs");
     context.repairManager.resumeRunningRepairRuns(context);

@@ -50,7 +50,7 @@ public class CommonTools {
    */
   public static RepairRun registerRepairRun(AppContext context, Cluster cluster,
                                             RepairUnit repairUnit, Optional<String> cause,
-                                            String owner, int segments,
+                                            String owner, int segments, Integer daysToExpireAfterDone,
                                             RepairParallelism repairParallelism, Double intensity)
       throws ReaperException {
 
@@ -62,7 +62,7 @@ public class CommonTools {
 
     // the next step is to prepare a repair run object
     RepairRun repairRun = storeNewRepairRun(context, cluster, repairUnit, cause, owner, segments,
-                                            repairParallelism, intensity);
+    		daysToExpireAfterDone, repairParallelism, intensity);
     checkNotNull(repairRun, "failed preparing repair run");
 
     // Notice that our RepairRun core object doesn't contain pointer to
@@ -124,10 +124,11 @@ public class CommonTools {
   private static RepairRun storeNewRepairRun(AppContext context, Cluster cluster,
                                              RepairUnit repairUnit, Optional<String> cause,
                                              String owner, int segments,
+                                             Integer daysToExpireAfterDone,
                                              RepairParallelism repairParallelism, Double intensity)
       throws ReaperException {
     RepairRun.Builder runBuilder = new RepairRun.Builder(cluster.getName(), repairUnit.getId(),
-                                                         DateTime.now(), intensity,
+                                                         DateTime.now(), daysToExpireAfterDone, intensity,
                                                          segments, repairParallelism);
     runBuilder.cause(cause.isPresent() ? cause.get() : "no cause specified");
     runBuilder.owner(owner);
@@ -176,6 +177,7 @@ public class CommonTools {
       RepairUnit repairUnit,
       int daysBetween,
       DateTime nextActivation,
+      Integer daysToExpireAfterDone,
       String owner,
       int segments,
       RepairParallelism repairParallelism,
@@ -185,7 +187,7 @@ public class CommonTools {
         new RepairSchedule.Builder(repairUnit.getId(), RepairSchedule.State.ACTIVE, daysBetween,
                                    nextActivation, ImmutableList.<Long>of(), segments,
                                    repairParallelism, intensity,
-                                   DateTime.now());
+                                   DateTime.now(), daysToExpireAfterDone);
     scheduleBuilder.owner(owner);
     RepairSchedule newRepairSchedule = context.storage.addRepairSchedule(scheduleBuilder);
     if (newRepairSchedule == null) {

@@ -35,6 +35,7 @@ public class RepairSchedule {
   private final DateTime creationTime;
   private final String owner;
   private final DateTime pauseTime;
+  private final Integer daysToExpireAfterDone;
 
   private RepairSchedule(Builder builder, long id) {
     this.id = id;
@@ -49,6 +50,7 @@ public class RepairSchedule {
     this.creationTime = builder.creationTime;
     this.owner = builder.owner;
     this.pauseTime = builder.pauseTime;
+    this.daysToExpireAfterDone = builder.daysToExpireAfterDone;
   }
 
   public long getId() {
@@ -111,6 +113,10 @@ public class RepairSchedule {
     return pauseTime;
   }
 
+  public Integer getDaysToExpireAfterDone() {
+	  return daysToExpireAfterDone;
+  }
+  
   public Builder with() {
     return new Builder(this);
   }
@@ -134,11 +140,12 @@ public class RepairSchedule {
     private DateTime creationTime;
     private String owner;
     private DateTime pauseTime;
+    private Integer daysToExpireAfterDone;
 
     public Builder(long repairUnitId, State state, int daysBetween, DateTime nextActivation,
                    ImmutableList<Long> runHistory, int segmentCount,
-                   RepairParallelism repairParallelism,
-                   double intensity, DateTime creationTime) {
+                   RepairParallelism repairParallelism, 
+                   double intensity, DateTime creationTime, Integer daysToExpireAfterDone) {
       this.repairUnitId = repairUnitId;
       this.state = state;
       this.daysBetween = daysBetween;
@@ -148,6 +155,7 @@ public class RepairSchedule {
       this.repairParallelism = repairParallelism;
       this.intensity = intensity;
       this.creationTime = creationTime;
+      this.daysToExpireAfterDone = daysToExpireAfterDone;
     }
 
     private Builder(RepairSchedule original) {
@@ -162,6 +170,7 @@ public class RepairSchedule {
       creationTime = original.creationTime;
       owner = original.owner;
       pauseTime = original.pauseTime;
+      daysToExpireAfterDone = original.daysToExpireAfterDone;
       intensity = original.intensity;
     }
 
@@ -213,6 +222,11 @@ public class RepairSchedule {
     public Builder pauseTime(DateTime pauseTime) {
       this.pauseTime = pauseTime;
       return this;
+    }
+    
+    public Builder daysToExpireAfterDone(Integer daysToExpireAfterDone) {
+    	this.daysToExpireAfterDone = daysToExpireAfterDone;
+    	return this;
     }
 
     public RepairSchedule build(long id) {

@@ -84,14 +84,15 @@ public class RepairScheduleResource {
       @QueryParam("owner") Optional<String> owner,
       @QueryParam("segmentCount") Optional<Integer> segmentCount,
       @QueryParam("repairParallelism") Optional<String> repairParallelism,
+      @QueryParam("daysToExpireAfterDone") Optional<Integer> daysToExpireAfterDone,
       @QueryParam("intensity") Optional<String> intensityStr,
       @QueryParam("scheduleDaysBetween") Optional<Integer> scheduleDaysBetween,
       @QueryParam("scheduleTriggerTime") Optional<String> scheduleTriggerTime
   ) {
     LOG.info("add repair schedule called with: clusterName = {}, keyspace = {}, tables = {}, "
-             + "owner = {}, segmentCount = {}, repairParallelism = {}, "
-             + "intensity = {}, scheduleDaysBetween = {}, scheduleTriggerTime = {}",
-             clusterName, keyspace, tableNamesParam, owner, segmentCount, repairParallelism,
+             + "owner = {}, segmentCount = {}, repairParallelism = {}, daysToExpireAfter = {}, "
+             + "intensity = {}, incrementalRepair = {}, scheduleDaysBetween = {}, scheduleTriggerTime = {}",
+             clusterName, keyspace, tableNamesParam, owner, segmentCount, repairParallelism, daysToExpireAfterDone,
              intensityStr, scheduleDaysBetween, scheduleTriggerTime);
     try {
       Response possibleFailResponse = RepairRunResource.checkRequestForAddRepair(
@@ -135,6 +136,13 @@ public class RepairScheduleResource {
         LOG.debug("using given segment count {} instead of configured value {}",
                   segmentCount.get(), context.config.getSegmentCount());
         segments = segmentCount.get();
+      }
+      
+      int daysToExpire = context.config.getDaysToExpireAfterDone();
+      if(daysToExpireAfterDone.isPresent()) {
+    	  LOG.debug("using given days to expire after {} instead of configured value {}",
+    			  daysToExpireAfterDone.get(), context.config.getDaysToExpireAfterDone());
+    	  daysToExpire = daysToExpireAfterDone.get();
       }
 
       Cluster cluster = context.storage.getCluster(Cluster.toSymbolicName(clusterName.get())).get();

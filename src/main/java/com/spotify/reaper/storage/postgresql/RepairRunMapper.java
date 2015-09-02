@@ -43,6 +43,7 @@ public class RepairRunMapper implements ResultSetMapper<RepairRun> {
         new RepairRun.Builder(r.getString("cluster_name"),
                               r.getLong("repair_unit_id"),
                               getDateTimeOrNull(r, "creation_time"),
+                              r.getInt("days_to_expire_after_done"),
                               r.getFloat("intensity"),
                               r.getInt("segment_count"),
                               repairParallelism);

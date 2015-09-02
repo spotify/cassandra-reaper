@@ -46,6 +46,11 @@ public class ReaperApplicationConfiguration extends Configuration {
 
   @JsonProperty
   @NotNull
+  @DefaultValue("2")
+  private Integer daysToExpireAfterDone;
+  
+  @JsonProperty
+  @NotNull
   private Integer repairRunThreadCount;
 
   @JsonProperty
@@ -92,7 +97,15 @@ public class ReaperApplicationConfiguration extends Configuration {
   public void setRepairIntensity(double repairIntensity) {
     this.repairIntensity = repairIntensity;
   }
+  
+  public Integer getDaysToExpireAfterDone() {
+	return daysToExpireAfterDone;
+  }
 
+  public void setDaysToExpireAfterDone(int daysToExpireAfterDone) {
+    this.daysToExpireAfterDone = daysToExpireAfterDone;
+  }  
+  
   public int getRepairRunThreadCount() {
     return repairRunThreadCount;
   }

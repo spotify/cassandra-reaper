@@ -84,7 +84,7 @@ public class RepairRunnerTest {
         storage.addRepairUnit(new RepairUnit.Builder(CLUSTER_NAME, KS_NAME, CF_NAMES));
     DateTimeUtils.setCurrentMillisFixed(TIME_RUN);
     RepairRun run = storage.addRepairRun(
-        new RepairRun.Builder(CLUSTER_NAME, cf.getId(), DateTime.now(), INTENSITY, 1,
+        new RepairRun.Builder(CLUSTER_NAME, cf.getId(), DateTime.now(), 2, INTENSITY, 1,
                               RepairParallelism.PARALLEL));
     storage.addRepairSegments(Collections.singleton(
         new RepairSegment.Builder(run.getId(), new RingRange(BigInteger.ZERO, BigInteger.ONE),
@@ -192,7 +192,7 @@ public class RepairRunnerTest {
         new RepairUnit.Builder(CLUSTER_NAME, KS_NAME, CF_NAMES)).getId();
     DateTimeUtils.setCurrentMillisFixed(TIME_RUN);
     RepairRun run = storage.addRepairRun(
-        new RepairRun.Builder(CLUSTER_NAME, cf, DateTime.now(), INTENSITY, 1,
+        new RepairRun.Builder(CLUSTER_NAME, cf, DateTime.now(), 2, INTENSITY, 1,
                               RepairParallelism.PARALLEL));
     storage.addRepairSegments(Lists.newArrayList(
         new RepairSegment.Builder(run.getId(), new RingRange(BigInteger.ZERO, BigInteger.ONE), cf)
