@@ -54,6 +54,9 @@ public class RepairScheduleStatus {
   @JsonIgnore
   private DateTime pauseTime;
 
+  @JsonProperty("days_to_expire_after_done")
+  private Integer daysToExpireAfterDone;
+  
   @JsonProperty
   private double intensity;
 
@@ -74,8 +77,8 @@ public class RepairScheduleStatus {
 
   public RepairScheduleStatus(long id, String owner, String clusterName, String keyspaceName,
       Collection<String> columnFamilies, RepairSchedule.State state,
-      DateTime creationTime, DateTime nextActivation,
-      DateTime pauseTime, double intensity, int segmentCount, RepairParallelism repairParallelism,
+      DateTime creationTime, DateTime nextActivation, DateTime pauseTime, 
+      Integer daysToExpireAfterDone, double intensity, int segmentCount, RepairParallelism repairParallelism,
       int daysBetween) {
     this.id = id;
     this.owner = owner;
@@ -86,6 +89,7 @@ public class RepairScheduleStatus {
     this.creationTime = creationTime;
     this.nextActivation = nextActivation;
     this.pauseTime = pauseTime;
+    this.daysToExpireAfterDone = daysToExpireAfterDone;
     this.intensity = CommonTools.roundDoubleNicely(intensity);
     this.segmentCount = segmentCount;
     this.repairParallelism = repairParallelism;
@@ -103,6 +107,7 @@ public class RepairScheduleStatus {
         repairSchedule.getCreationTime(),
         repairSchedule.getNextActivation(),
         repairSchedule.getPauseTime(),
+        repairSchedule.getDaysToExpireAfterDone(),
         repairSchedule.getIntensity(),
         repairSchedule.getSegmentCount(),
         repairSchedule.getRepairParallelism(),
@@ -177,9 +182,17 @@ public class RepairScheduleStatus {
   public DateTime getPauseTime() {
     return pauseTime;
   }
-
+  
   public void setPauseTime(DateTime pauseTime) {
     this.pauseTime = pauseTime;
+  }
+  
+  public Integer getDaysToExpireAfterDone() {
+	return daysToExpireAfterDone; 
+  }
+  
+  public void setDaysToExpireAfterDone(Integer daysToExpireAfterDone) {
+	  this.daysToExpireAfterDone = daysToExpireAfterDone;
   }
 
   public double getIntensity() {

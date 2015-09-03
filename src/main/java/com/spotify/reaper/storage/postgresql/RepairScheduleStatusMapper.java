@@ -13,18 +13,16 @@
  */
 package com.spotify.reaper.storage.postgresql;
 
-import com.google.common.collect.ImmutableSet;
-
-import com.spotify.reaper.core.RepairSchedule;
-import com.spotify.reaper.core.RepairUnit;
-import com.spotify.reaper.resources.view.RepairScheduleStatus;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 import org.apache.cassandra.repair.RepairParallelism;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.tweak.ResultSetMapper;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import com.google.common.collect.ImmutableSet;
+import com.spotify.reaper.core.RepairSchedule;
+import com.spotify.reaper.resources.view.RepairScheduleStatus;
 
 public class RepairScheduleStatusMapper implements ResultSetMapper<RepairScheduleStatus> {
 
@@ -41,6 +39,7 @@ public class RepairScheduleStatusMapper implements ResultSetMapper<RepairSchedul
         RepairRunMapper.getDateTimeOrNull(r, "creation_time"),
         RepairRunMapper.getDateTimeOrNull(r, "next_activation"),
         RepairRunMapper.getDateTimeOrNull(r, "pause_time"),
+        r.getInt("days_to_expire_after_done"),
         r.getDouble("intensity"),
         r.getInt("segment_count"),
         RepairParallelism.valueOf(r.getString("repair_parallelism")),

@@ -13,23 +13,7 @@
  */
 package com.spotify.reaper.resources;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
-
-import com.spotify.reaper.AppContext;
-import com.spotify.reaper.ReaperApplication;
-import com.spotify.reaper.ReaperException;
-import com.spotify.reaper.core.Cluster;
-import com.spotify.reaper.core.RepairRun;
-import com.spotify.reaper.core.RepairSegment;
-import com.spotify.reaper.core.RepairUnit;
-import com.spotify.reaper.resources.view.RepairRunStatus;
-
-import org.apache.cassandra.repair.RepairParallelism;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -54,7 +38,22 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import org.apache.cassandra.repair.RepairParallelism;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Optional;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+import com.spotify.reaper.AppContext;
+import com.spotify.reaper.ReaperApplication;
+import com.spotify.reaper.ReaperException;
+import com.spotify.reaper.core.Cluster;
+import com.spotify.reaper.core.RepairRun;
+import com.spotify.reaper.core.RepairSegment;
+import com.spotify.reaper.core.RepairUnit;
+import com.spotify.reaper.resources.view.RepairRunStatus;
 
 @Path("/repair_run")
 @Produces(MediaType.APPLICATION_JSON)
@@ -90,11 +89,12 @@ public class RepairRunResource {
       @QueryParam("cause") Optional<String> cause,
       @QueryParam("segmentCount") Optional<Integer> segmentCount,
       @QueryParam("repairParallelism") Optional<String> repairParallelism,
+      @QueryParam("daysToExpireAfterDone") Optional<Integer> daysToExpireAfterDone,
       @QueryParam("intensity") Optional<String> intensityStr
   ) {
-    LOG.info("add repair run called with: clusterName = {}, keyspace = {}, tables = {}, owner = {},"
-             + " cause = {}, segmentCount = {}, repairParallelism = {}, intensity = {}",
-             clusterName, keyspace, tableNamesParam, owner, cause, segmentCount, repairParallelism,
+    LOG.info("add repair run called with: clusterName = {}, keyspace = {}, tables = {}, owner = {}, daysToExpireAfterDone = {},"
+             + " cause = {}, segmentCount = {}, repairParallelism = {}, intensity = {}, incrementalRepair = {}",
+             clusterName, keyspace, tableNamesParam, owner, daysToExpireAfterDone, cause, segmentCount, repairParallelism,
              intensityStr);
     try {
       Response possibleFailedResponse = RepairRunResource.checkRequestForAddRepair(
@@ -103,6 +103,14 @@ public class RepairRunResource {
         return possibleFailedResponse;
       }
 
+      
+      int daysToExpire = context.config.getDaysToExpireAfterDone();
+      if(daysToExpireAfterDone.isPresent()) {
+    	  LOG.debug("using given days to expire after {} instead of configured value {}",
+    			  daysToExpireAfterDone.get(), context.config.getDaysToExpireAfterDone());
+    	  daysToExpire = daysToExpireAfterDone.get();
+      }
+      
       Double intensity;
       if (intensityStr.isPresent()) {
         intensity = Double.parseDouble(intensityStr.get());
@@ -138,7 +146,7 @@ public class RepairRunResource {
       }
 
       RepairRun newRepairRun = CommonTools.registerRepairRun(
-          context, cluster, theRepairUnit, cause, owner.get(), segments,
+          context, cluster, theRepairUnit, cause, owner.get(), segments, daysToExpire,
           parallelism, intensity);
 
       return Response.created(buildRepairRunURI(uriInfo, newRepairRun))
@@ -487,6 +495,7 @@ public class RepairRunResource {
     if (deletedRun.isPresent()) {
       RepairRunStatus repairRunStatus =
           new RepairRunStatus(deletedRun.get(), unitPossiblyDeleted.get(), segmentsRepaired);
+      LOG.info("Repair run with ID {} deleted.", repairRunStatus.getId());
       return Response.ok().entity(repairRunStatus).build();
     }
     return Response.serverError().entity("delete failed for repair run with id \""

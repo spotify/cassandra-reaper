@@ -34,6 +34,7 @@ public class RepairRun implements Comparable<RepairRun> {
   private final DateTime startTime;
   private final DateTime endTime;
   private final DateTime pauseTime;
+  private final Integer daysToExpireAfterDone;
   private final double intensity;
   private final String lastEvent;
   private final int segmentCount;
@@ -50,6 +51,7 @@ public class RepairRun implements Comparable<RepairRun> {
     this.startTime = builder.startTime;
     this.endTime = builder.endTime;
     this.pauseTime = builder.pauseTime;
+    this.daysToExpireAfterDone = builder.daysToExpireAfterDone;
     this.intensity = builder.intensity;
     this.lastEvent = builder.lastEvent;
     this.segmentCount = builder.segmentCount;
@@ -95,7 +97,11 @@ public class RepairRun implements Comparable<RepairRun> {
   public DateTime getPauseTime() {
     return pauseTime;
   }
-
+  
+  public Integer getDaysToExpireAfterDone() {
+	return daysToExpireAfterDone;
+  }
+  
   public double getIntensity() {
     return intensity;
   }
@@ -164,16 +170,18 @@ public class RepairRun implements Comparable<RepairRun> {
     private DateTime startTime;
     private DateTime endTime;
     private DateTime pauseTime;
+    private Integer daysToExpireAfterDone;
     private String lastEvent = "no events";
     private int segmentCount;
     private RepairParallelism repairParallelism;
 
-    public Builder(String clusterName, long repairUnitId, DateTime creationTime,
+    public Builder(String clusterName, long repairUnitId, DateTime creationTime, Integer daysToExpireAfterDone,
                    double intensity, int segmentCount, RepairParallelism repairParallelism) {
       this.clusterName = clusterName;
       this.repairUnitId = repairUnitId;
       this.runState = RunState.NOT_STARTED;
       this.creationTime = creationTime;
+      this.daysToExpireAfterDone = daysToExpireAfterDone;
       this.intensity = intensity;
       this.segmentCount = segmentCount;
       this.repairParallelism = repairParallelism;
@@ -190,6 +198,7 @@ public class RepairRun implements Comparable<RepairRun> {
       startTime = original.startTime;
       endTime = original.endTime;
       pauseTime = original.pauseTime;
+      daysToExpireAfterDone = original.daysToExpireAfterDone;
       lastEvent = original.lastEvent;
       segmentCount = original.segmentCount;
       repairParallelism = original.repairParallelism;
@@ -234,7 +243,12 @@ public class RepairRun implements Comparable<RepairRun> {
       this.pauseTime = pauseTime;
       return this;
     }
-
+    
+    public Builder daysToExpireAfterDone(Integer daysToExpireAfterDone) {
+      this.daysToExpireAfterDone = daysToExpireAfterDone;
+      return this;
+    }
+    
     public Builder lastEvent(String event) {
       this.lastEvent = event;
       return this;

@@ -3,9 +3,10 @@
 -- Assumes PostgreSQL version 9.3 or newer
 --
 
--- CREATE DATABASE reaper_db;
--- CREATE USER reaper WITH PASSWORD 'my_secret_password';
--- GRANT ALL PRIVILEGES ON DATABASE reaper_db TO reaper;
+CREATE DATABASE reaper_db;
+\connect reaper_db;
+CREATE USER reaper WITH PASSWORD 'my_secret_password';
+GRANT ALL PRIVILEGES ON DATABASE reaper_db TO reaper;
 
 -- For cleaning up the database, just do first in the following order:
 -- DROP TABLE "repair_segment";
@@ -45,6 +46,7 @@ CREATE TABLE IF NOT EXISTS "repair_run" (
   "start_time"         TIMESTAMP WITH TIME ZONE DEFAULT NULL,
   "end_time"           TIMESTAMP WITH TIME ZONE DEFAULT NULL,
   "pause_time"         TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+  "days_to_expire_after_done"	INT             NOT NULL,
   "intensity"          REAL                     NOT NULL,
   "last_event"         TEXT                     NOT NULL,
   "segment_count"      INT                      NOT NULL,
@@ -85,7 +87,8 @@ CREATE TABLE IF NOT EXISTS "repair_schedule" (
   "intensity"          REAL                     NOT NULL,
   "creation_time"      TIMESTAMP WITH TIME ZONE NOT NULL,
   "owner"              TEXT                     NOT NULL,
-  "pause_time"         TIMESTAMP WITH TIME ZONE DEFAULT NULL
+  "pause_time"         TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+  "days_to_expire_after_done"	INT             NOT NULL
 );
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE cluster TO reaper;
