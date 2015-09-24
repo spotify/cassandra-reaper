@@ -21,6 +21,9 @@ changelog:
 	echo "    * Useless information" >> debian/changelog
 	echo " -- Malcolm Matalka <malcolm@spotify.com>  Tue, 10 Aug 2015 17:10:00 +0200" >> debian/changelog
 
+jenkins-test:
+	mvn3 verify
+
 jenkins-release: maybe-upload-release-$(UPLOAD_DEBIAN_PACKAGE)
 
 maybe-upload-release-true: build-debs
