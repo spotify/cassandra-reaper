@@ -332,12 +332,7 @@ public class JmxProxy implements NotificationListener, AutoCloseable {
       RepairParallelism repairParallelism, Collection<String> columnFamilies) {
     checkNotNull(ssProxy, "Looks like the proxy is not connected");
     String cassandraVersion = ssProxy.getReleaseVersion();
-    boolean canUseDatacenterAware = false;
-    try {
-      canUseDatacenterAware = versionCompare(cassandraVersion, "2.0.12") >= 0;
-    } catch (ReaperException e) {
-      LOG.warn("failed on version comparison, not using dc aware repairs by default");
-    }
+    boolean canUseDatacenterAware = versionCompare(cassandraVersion, "2.0.12") >= 0;
     String msg = String.format("Triggering repair of range (%s,%s] for keyspace \"%s\" on "
                                + "host %s, with repair parallelism %s, in cluster with Cassandra "
                                + "version '%s' (can use DATACENTER_AWARE '%s'), "
@@ -441,7 +436,7 @@ public class JmxProxy implements NotificationListener, AutoCloseable {
    * The result is zero if the strings are _numerically_ equal.
    * It does not work if "1.10" is supposed to be equal to "1.10.0".
    */
-  public static Integer versionCompare(String str1, String str2) throws ReaperException {
+  public static Integer versionCompare(String str1, String str2) {
     try {
       str1 = str1.split(" ")[0].replaceAll("[-_~]", ".");
       str2 = str2.split(" ")[0].replaceAll("[-_~]", ".");
@@ -479,7 +474,7 @@ public class JmxProxy implements NotificationListener, AutoCloseable {
       }
     } catch (Exception ex) {
       LOG.error("failed comparing strings for versions: '{}' '{}'", str1, str2);
-      throw new ReaperException(ex);
+      throw new IllegalArgumentException(ex);
     }
   }
 
