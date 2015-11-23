@@ -333,6 +333,7 @@ public class JmxProxy implements NotificationListener, AutoCloseable {
     checkNotNull(ssProxy, "Looks like the proxy is not connected");
     String cassandraVersion = ssProxy.getReleaseVersion();
     boolean canUseDatacenterAware = versionCompare(cassandraVersion, "2.0.12") >= 0;
+    boolean canUseIncrementalRepair = versionCompare(cassandraVersion, "2.1.0") >= 0;
     String msg = String.format("Triggering repair of range (%s,%s] for keyspace \"%s\" on "
                                + "host %s, with repair parallelism %s, in cluster with Cassandra "
                                + "version '%s' (can use DATACENTER_AWARE '%s'), "
