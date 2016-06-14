@@ -85,17 +85,18 @@ public class RepairScheduleResource {
       @QueryParam("segmentCount") Optional<Integer> segmentCount,
       @QueryParam("repairParallelism") Optional<String> repairParallelism,
       @QueryParam("intensity") Optional<String> intensityStr,
+      @QueryParam("incrementalRepair") Optional<String> incrementalRepairStr,
       @QueryParam("scheduleDaysBetween") Optional<Integer> scheduleDaysBetween,
       @QueryParam("scheduleTriggerTime") Optional<String> scheduleTriggerTime
   ) {
     LOG.info("add repair schedule called with: clusterName = {}, keyspace = {}, tables = {}, "
              + "owner = {}, segmentCount = {}, repairParallelism = {}, "
-             + "intensity = {}, scheduleDaysBetween = {}, scheduleTriggerTime = {}",
+             + "intensity = {}, incrementalRepair = {}, scheduleDaysBetween = {}, scheduleTriggerTime = {}",
         clusterName, keyspace, tableNamesParam, owner, segmentCount, repairParallelism,
-        intensityStr, scheduleDaysBetween, scheduleTriggerTime);
+        intensityStr, incrementalRepairStr, scheduleDaysBetween, scheduleTriggerTime);
     try {
       Response possibleFailResponse = RepairRunResource.checkRequestForAddRepair(
-          context, clusterName, keyspace, owner, segmentCount, repairParallelism, intensityStr);
+          context, clusterName, keyspace, owner, segmentCount, repairParallelism, intensityStr, incrementalRepairStr);
       if (null != possibleFailResponse) {
         return possibleFailResponse;
       }
@@ -122,12 +123,25 @@ public class RepairScheduleResource {
             + CommonTools.dateTimeToISO8601(nextActivation)).build();
       }
 
+      if(!scheduleDaysBetween.isPresent()) {
+    	  return Response.status(Response.Status.BAD_REQUEST).entity(
+              "missing required parameter: scheduleDaysBetween").build();
+      }
+
       Double intensity;
       if (intensityStr.isPresent()) {
         intensity = Double.parseDouble(intensityStr.get());
       } else {
         intensity = context.config.getRepairIntensity();
         LOG.debug("no intensity given, so using default value: " + intensity);
+      }
+
+      Boolean incrementalRepair;
+      if (incrementalRepairStr.isPresent()) {
+    	  incrementalRepair = Boolean.parseBoolean(incrementalRepairStr.get());
+      } else {
+    	  incrementalRepair = context.config.getIncrementalRepair();
+        LOG.debug("no incremental repair given, so using default value: " + incrementalRepair);
       }
 
       int segments = context.config.getSegmentCount();
@@ -154,13 +168,25 @@ public class RepairScheduleResource {
       }
 
       RepairUnit theRepairUnit =
-          CommonTools.getNewOrExistingRepairUnit(context, cluster, keyspace.get(), tableNames);
+          CommonTools.getNewOrExistingRepairUnit(context, cluster, keyspace.get(), tableNames, incrementalRepair);
+
+      if(theRepairUnit.getIncrementalRepair() != incrementalRepair) {
+    	  return Response.status(Response.Status.BAD_REQUEST).entity(
+                  "A repair Schedule already exist for the same cluster/keyspace/table but with a different incremental repair value."
+                  + "Requested value: " + incrementalRepair + " | Existing value: " + theRepairUnit.getIncrementalRepair()).build();
+      }
 
       RepairParallelism parallelism = context.config.getRepairParallelism();
       if (repairParallelism.isPresent()) {
         LOG.debug("using given repair parallelism {} instead of configured value {}",
             repairParallelism.get(), context.config.getRepairParallelism());
         parallelism = RepairParallelism.valueOf(repairParallelism.get().toUpperCase());
+      }
+
+      if(!parallelism.equals(RepairParallelism.PARALLEL) && incrementalRepair) {
+          return Response.status(Response.Status.BAD_REQUEST).entity(
+                  "It is not possible to mix sequential repair and incremental repairs. parallelism "
+                  + parallelism + " : incrementalRepair " + incrementalRepair).build();
       }
 
       RepairSchedule newRepairSchedule = CommonTools.storeNewRepairSchedule(

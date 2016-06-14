@@ -11,6 +11,7 @@ repairRunThreadCount: 15
 hangingRepairTimeoutMins: 30
 storageType: memory
 enableCrossOrigin: true
+incrementalRepair: false
 
 logging:
   level: INFO

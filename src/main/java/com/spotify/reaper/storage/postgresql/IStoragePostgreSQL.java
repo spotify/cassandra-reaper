@@ -85,11 +85,11 @@ public interface IStoragePostgreSQL {
 
   // RepairUnit
   //
-  String SQL_REPAIR_UNIT_ALL_FIELDS_NO_ID = "cluster_name, keyspace_name, column_families";
+  String SQL_REPAIR_UNIT_ALL_FIELDS_NO_ID = "cluster_name, keyspace_name, column_families, incremental_repair";
   String SQL_REPAIR_UNIT_ALL_FIELDS = "repair_unit.id, " + SQL_REPAIR_UNIT_ALL_FIELDS_NO_ID;
   String SQL_INSERT_REPAIR_UNIT =
       "INSERT INTO repair_unit (" + SQL_REPAIR_UNIT_ALL_FIELDS_NO_ID + ") VALUES "
-      + "(:clusterName, :keyspaceName, :columnFamilies)";
+      + "(:clusterName, :keyspaceName, :columnFamilies, :incrementalRepair)";
   String SQL_GET_REPAIR_UNIT =
       "SELECT " + SQL_REPAIR_UNIT_ALL_FIELDS + " FROM repair_unit WHERE id = :id";
   String SQL_GET_REPAIR_UNIT_BY_CLUSTER_AND_TABLES =
@@ -196,7 +196,7 @@ public interface IStoragePostgreSQL {
       + "(SELECT COUNT(*) FROM repair_segment WHERE run_id = repair_run.id) AS segments_total, "
       + "repair_run.state, repair_run.start_time, "
       + "repair_run.end_time, cause, owner, last_event, "
-      + "creation_time, pause_time, intensity, repair_parallelism "
+      + "creation_time, pause_time, intensity, repair_parallelism, incremental_repair "
       + "FROM repair_run "
       + "JOIN repair_unit ON repair_unit_id = repair_unit.id "
       + "WHERE repair_unit.cluster_name = :clusterName "
@@ -206,7 +206,7 @@ public interface IStoragePostgreSQL {
   String SQL_CLUSTER_SCHEDULE_OVERVIEW =
       "SELECT repair_schedule.id, owner, cluster_name, keyspace_name, column_families, state, "
       + "creation_time, next_activation, pause_time, intensity, segment_count, "
-      + "repair_parallelism, days_between "
+      + "repair_parallelism, days_between, incremental_repair "
       + "FROM repair_schedule "
       + "JOIN repair_unit ON repair_unit_id = repair_unit.id "
       + "WHERE cluster_name = :clusterName";
