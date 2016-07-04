@@ -65,3 +65,10 @@ database:
 
   # the minimum amount of time an connection must sit idle in the pool before it is eligible for eviction
   minIdleTime: 1 minute
+
+# Config used to automatically add/remove sheduled repair for all keyspaces
+autoScheduling:
+  enabled: false
+  initialDelayPeriod: PT1M
+  periodBetweenPolls: PT10M
+  schedulingNextActivationPeriod: PT5M

@@ -37,3 +37,9 @@ database:
   user: pg-user
   password: pg-pass
   url: jdbc:postgresql://db.example.com/db-prod
+
+autoScheduling:
+  enabled: false
+  initialDelayPeriod: PT15S
+  periodBetweenPolls: PT10M
+  schedulingNextActivationPeriod: PT5M
