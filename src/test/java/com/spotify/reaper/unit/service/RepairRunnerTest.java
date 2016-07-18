@@ -39,7 +39,9 @@ import org.apache.cassandra.service.ActiveRepairService;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeUtils;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.mockito.Matchers;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -63,6 +65,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class RepairRunnerTest {
+
+  @Rule
+  public final ExpectedException exception = ExpectedException.none();
 
   @Before
   public void setUp() throws Exception {
@@ -256,6 +261,16 @@ public class RepairRunnerTest {
 
     map = RepairRunnerTest.sixNodeCluster();
     assertEquals(2, RepairRunner.getPossibleParallelRepairsCount(map));
+  }
+
+  @Test
+  public void getPossibleRepairsForInvalidKeyspaceTest() throws Exception {
+    Map<List<String>, List<String>> map = Maps.newHashMap();
+    addRangeToMap(map, "1", "2");
+
+    exception.expect(ReaperException.class);
+    exception.expectMessage("Repairing a keyspace with 0 replicas");
+    RepairRunner.getPossibleParallelRepairsCount(map);
   }
 
   @Test

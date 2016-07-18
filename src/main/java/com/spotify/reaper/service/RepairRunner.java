@@ -100,7 +100,14 @@ public class RepairRunner implements Runnable {
       LOG.error(msg);
       throw new ReaperException(msg);
     }
-    return ranges.size() / ranges.values().iterator().next().size();
+    // This is really the replication for the cluster. For a mis-configured cluster e.g the
+    // data center doesn't exist this will return an empty list and lead to a divide by 0.
+    int replicationFactor = ranges.values().iterator().next().size();
+    if (replicationFactor == 0) {
+      LOG.error("Cluster has no replicas for a token range. Probably a mis-configured keyspace: " + ranges);
+      throw new ReaperException("Repairing a keyspace with 0 replicas");
+    }
+    return ranges.size() / replicationFactor;
   }
 
   @VisibleForTesting
