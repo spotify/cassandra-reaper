@@ -1,0 +1,72 @@
+# Cassandra Reaper Configuration for Acceptance Tests.
+#
+segmentCount: 200
+repairParallelism: SEQUENTIAL
+repairIntensity: 0.95
+scheduleDaysBetween: 7
+repairRunThreadCount: 15
+hangingRepairTimeoutMins: 1
+storageType: memory
+
+logging:
+  level: DEBUG
+  loggers:
+    io.dropwizard: INFO
+    org.eclipse.jetty: INFO
+  appenders:
+    - type: console
+
+server:
+  type: default
+  applicationConnectors:
+    - type: http
+      port: 8083
+      bindHost: 127.0.0.1
+  adminConnectors:
+    - type: http
+      port: 8084
+      bindHost: 127.0.0.1
+
+# database section will be ignored if storageType is set to "memory"
+database:
+  # the name of your JDBC driver
+  driverClass: org.postgresql.Driver
+
+  # the username
+  user: reaper-user
+
+  # the password
+  password: reaper-secret
+
+  # the JDBC URL
+  url: jdbc:postgresql://127.0.0.1:5432/reaper_db
+
+  # any properties specific to your JDBC driver:
+  properties:
+    charSet: UTF-8
+
+  # the maximum amount of time to wait on an empty pool before throwing an exception
+  maxWaitForConnection: 1s
+
+  # the SQL query to run when validating a connection's liveness
+  validationQuery: "SELECT 1"
+
+  # the minimum number of connections to keep open
+  minSize: 8
+
+  # the maximum number of connections to keep open
+  maxSize: 32
+
+  # whether or not idle connections should be validated
+  checkConnectionWhileIdle: true
+
+  # the amount of time to sleep between runs of the idle connection validation, abandoned cleaner and idle pool resizing
+  evictionInterval: 10s
+
+  # the minimum amount of time an connection must sit idle in the pool before it is eligible for eviction
+  minIdleTime: 1 minute
+
+accessControl:
+  sessionTimeout: PT30S
+  shiro:
+    iniConfigs: ["classpath:shiro.ini"]

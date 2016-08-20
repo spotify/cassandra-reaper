@@ -15,13 +15,12 @@ package com.spotify.reaper;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.spotify.reaper.ReaperApplicationConfiguration.JmxCredentials;
 import com.spotify.reaper.cassandra.JmxConnectionFactory;
-import com.spotify.reaper.resources.ClusterResource;
-import com.spotify.reaper.resources.PingResource;
-import com.spotify.reaper.resources.ReaperHealthCheck;
-import com.spotify.reaper.resources.RepairRunResource;
-import com.spotify.reaper.resources.RepairScheduleResource;
+import com.spotify.reaper.resources.*;
+import com.spotify.reaper.resources.auth.ShiroExceptionMapper;
+import com.spotify.reaper.resources.LoginResource;
 import com.spotify.reaper.service.RepairManager;
 import com.spotify.reaper.service.SchedulingManager;
 import com.spotify.reaper.storage.IStorage;
@@ -31,8 +30,11 @@ import com.spotify.reaper.storage.PostgresStorage;
 import io.dropwizard.configuration.EnvironmentVariableSubstitutor;
 import io.dropwizard.configuration.SubstitutingSourceProvider;
 import org.apache.cassandra.repair.RepairParallelism;
+import org.eclipse.jetty.server.session.SessionHandler;
 import org.eclipse.jetty.servlets.CrossOriginFilter;
 import org.joda.time.DateTimeZone;
+import org.secnod.dropwizard.shiro.ShiroBundle;
+import org.secnod.dropwizard.shiro.ShiroConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -89,12 +91,28 @@ public class ReaperApplication extends Application<ReaperApplicationConfiguratio
   @Override
   public void initialize(Bootstrap<ReaperApplicationConfiguration> bootstrap) {
     bootstrap.addBundle(new AssetsBundle("/assets/", "/webui", "index.html"));
+
+    bootstrap.addBundle(new ShiroBundle<ReaperApplicationConfiguration>() {
+      @Override
+      public void run(ReaperApplicationConfiguration configuration, Environment environment) {
+        if (configuration.isAccessControlEnabled()) {
+          super.run(configuration, environment);
+        }
+      }
+
+      @Override
+      protected ShiroConfiguration narrow(ReaperApplicationConfiguration configuration) {
+        return configuration.getAccessControl().getShiroConfiguration();
+      }
+    });
+
     bootstrap.setConfigurationSourceProvider(
             new SubstitutingSourceProvider(
                     bootstrap.getConfigurationSourceProvider(),
                     new EnvironmentVariableSubstitutor()
             )
     );
+    bootstrap.getObjectMapper().registerModule(new JavaTimeModule());
   }
 
   @Override
@@ -142,6 +160,14 @@ public class ReaperApplication extends Application<ReaperApplicationConfiguratio
       cors.setInitParameter("allowedHeaders", "X-Requested-With,Content-Type,Accept,Origin");
       cors.setInitParameter("allowedMethods", "OPTIONS,GET,PUT,POST,DELETE,HEAD");
       cors.addMappingForUrlPatterns(EnumSet.allOf(DispatcherType.class), true, "/*");
+    }
+
+    if (config.isAccessControlEnabled()) {
+      SessionHandler sessionHandler = new SessionHandler();
+      sessionHandler.getSessionManager().setMaxInactiveInterval((int) config.getAccessControl().getSessionTimeout().getSeconds());
+      environment.servlets().setSessionHandler(sessionHandler);
+      environment.jersey().register(new ShiroExceptionMapper());
+      environment.jersey().register(new LoginResource());
     }
 
     JmxCredentials jmxAuth = config.getJmxAuth();

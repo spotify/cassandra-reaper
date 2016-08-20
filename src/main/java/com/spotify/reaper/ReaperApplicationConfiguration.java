@@ -18,6 +18,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.repair.RepairParallelism;
 import org.hibernate.validator.constraints.NotEmpty;
 
+import java.time.Duration;
 import java.util.Map;
 
 import javax.validation.Valid;
@@ -28,6 +29,7 @@ import javax.ws.rs.DefaultValue;
 
 import io.dropwizard.Configuration;
 import io.dropwizard.db.DataSourceFactory;
+import org.secnod.dropwizard.shiro.ShiroConfiguration;
 
 public class ReaperApplicationConfiguration extends Configuration {
 
@@ -74,6 +76,8 @@ public class ReaperApplicationConfiguration extends Configuration {
   @JsonProperty
   private JmxCredentials jmxAuth;
 
+  @JsonProperty
+  private AccessControlConfiguration accessControl;
 
   public int getSegmentCount() {
     return segmentCount;
@@ -168,6 +172,17 @@ public class ReaperApplicationConfiguration extends Configuration {
     this.jmxAuth = jmxAuth;
   }
 
+  public AccessControlConfiguration getAccessControl() {
+    return accessControl;
+  }
+
+  public void setAccessControl(AccessControlConfiguration accessControl) {
+    this.accessControl = accessControl;
+  }
+
+  public boolean isAccessControlEnabled() {
+    return getAccessControl() != null;
+  }
   public static class JmxCredentials {
 
     @JsonProperty
@@ -183,6 +198,22 @@ public class ReaperApplicationConfiguration extends Configuration {
       return password;
     }
 
+  }
+
+  public static class AccessControlConfiguration {
+
+    @JsonProperty
+    private ShiroConfiguration shiro;
+    @JsonProperty
+    private Duration sessionTimeout;
+
+    public ShiroConfiguration getShiroConfiguration() {
+      return shiro;
+    }
+
+    public Duration getSessionTimeout() {
+      return sessionTimeout;
+    }
   }
 
 }

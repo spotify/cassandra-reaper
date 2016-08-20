@@ -25,6 +25,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.eq;
@@ -41,13 +44,14 @@ public class BasicSteps {
   private static Optional<Map<String, String>> EMPTY_PARAMS = Optional.absent();
 
   private static SimpleReaperClient client;
+  private Response response;
 
   @Before
   public static void setup() {
     // actual setup is done in setupReaperTestRunner step
   }
 
-  public static void setupReaperTestRunner() throws Exception {
+  public static void setupReaperTestRunner(ReaperTestJettyRunner.ConfigResource configResource) throws Exception {
     LOG.info("setting up testing Reaper runner with {} seed hosts defined",
              TestContext.TEST_CLUSTER_SEED_HOSTS.size());
     AppContext context = new AppContext();
@@ -66,7 +70,7 @@ public class BasicSteps {
       when(context.jmxConnectionFactory.connect(org.mockito.Matchers.<Optional>any(), eq(seedHost)))
           .thenReturn(jmx);
     }
-    ReaperTestJettyRunner.setup(context);
+    ReaperTestJettyRunner.setup(context, configResource);
     client = ReaperTestJettyRunner.getClient();
   }
 
@@ -86,10 +90,15 @@ public class BasicSteps {
 
   @Given("^a reaper service is running$")
   public void a_reaper_service_is_running() throws Throwable {
-    setupReaperTestRunner();
-    callAndExpect("GET", "/ping", Optional.<Map<String, String>>absent(),
-                  Response.Status.OK, Optional.<String>absent());
+    setupReaperTestRunner(ReaperTestJettyRunner.ConfigResource.DEFAULT);
+    callAndExpect("GET", "/ping", Optional.<Map<String, String>>absent(), Response.Status.OK, Optional.<String>absent());
   }
+
+  @Given("^a reaper service with access control enabled is running$")
+  public void a_reaper_service_with_access_control_enabled_is_running() throws Throwable {
+    setupReaperTestRunner(ReaperTestJettyRunner.ConfigResource.ACCESS_CONTROL_ENABLED);
+    callAndExpect("GET", "/ping", Optional.<Map<String, String>>absent(), Response.Status.OK, Optional.<String>absent());
+ }
 
   @Given("^cluster seed host \"([^\"]*)\" points to cluster with name \"([^\"]*)\"$")
   public void cluster_seed_host_points_to_cluster_with_name(String seedHost, String clusterName)
@@ -186,7 +195,7 @@ public class BasicSteps {
   public void reaper_has_scheduled_repairs_for_cluster_called(int repairAmount,
                                                               String clusterName)
       throws Throwable {
-    List<RepairScheduleStatus> schedules = client.getRepairSchedulesForCluster(clusterName);
+    List<RepairScheduleStatus> schedules = client.getRepairSchedulesForCluster(clusterName, EMPTY_PARAMS);
     LOG.info("Got " + schedules.size() + " schedules");
     assertEquals(repairAmount, schedules.size());
   }
@@ -261,5 +270,27 @@ public class BasicSteps {
     params.put("owner", TestContext.TEST_USER);
     callAndExpect("DELETE", "/repair_run/" + TestContext.LAST_MODIFIED_ID,
                   Optional.of(params), Response.Status.OK, Optional.of("\"" + clusterName + "\""));
+  }
+
+  @When("^a (GET|POST|PUT|DELETE) ([^\"]*) is made$")
+  public void aRequestIsMade(String method, String requestPath) throws Throwable {
+    response = ReaperTestJettyRunner.callReaper(method, requestPath, EMPTY_PARAMS);
+  }
+
+  @Then("^a \"([^\"]*)\" response is returned$")
+  public void aResponseIsReturned(String statusDescription) throws Throwable {
+    assertThat(response.getStatus(), equalTo(httpStatus(statusDescription)));
+  }
+
+  @Then("^the response was redirected to the login page$")
+  public void theResponseWasRedirectedToTheLoginPage() throws Throwable {
+    System.out.println("response = " + response.toString());
+    assertThat(response.hasEntity(), equalTo(true));
+    assertThat(response.readEntity(String.class), containsString("<title>Not a real login page</title>"));
+  }
+
+  private static int httpStatus(String statusCodeDescriptions) {
+    String enumName = statusCodeDescriptions.toUpperCase().replace(' ', '_');
+    return Response.Status.valueOf(enumName).getStatusCode();
   }
 }

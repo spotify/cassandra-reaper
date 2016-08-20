@@ -136,6 +136,15 @@ The Reaper service specific configuration values are:
   Optional setting which you can set to be "true", if you wish to enable the CORS headers
   for running an external GUI application, like [this project](https://github.com/spodkowinski/cassandra-reaper-ui).
 
+* accessControl
+
+  Optional setting to enable access control for REST service endpoints based on Apache Shiro.
+  When used, additional `/login` and `/logout` endpoints are made available to allow session management.
+  All the access control is driven exclusively from the `shiro.ini` configuration. 
+  Its location can be specified via `shiro:iniConfigs`.
+  An example `shiro.ini` configuration file can be found from within this project repository:
+  *src/test/resources/shiro.ini*
+  
 Notice that in the *server* section of the configuration, if you want to bind the service
 to all interfaces, use value "0.0.0.0", or just leave the *bindHost* line away completely.
 Using "*" as bind value won't work.
@@ -262,6 +271,19 @@ Source code for all the REST resources can be found from package com.spotify.rea
     Repair schedule will get deleted only if there are no associated repair runs for the schedule.
     Delete all the related repair runs before calling this endpoint.
 
+## Login Resource
+
+* POST     /login
+  * Expected form parameters:
+      * *username*: username
+      * *password*: password
+  * Performs the authentication based on the `shiro` configuration and creates the session when successful
+  * Returns an error when password combination is not valid
+
+* POST     /logout
+  * Expected query parameters: *None*
+  * Invalidates the current session
+  
 
 Doing a Release (on this repository)
 ------------------------------------

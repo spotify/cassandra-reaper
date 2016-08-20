@@ -27,8 +27,6 @@ public class SimpleReaperClient {
 
   private static final Logger LOG = LoggerFactory.getLogger(SimpleReaperClient.class);
 
-  private static Optional<Map<String, String>> EMPTY_PARAMS = Optional.absent();
-
   public static Response doHttpCall(String httpMethod, String host, int port, String urlPath,
                                     Optional<Map<String, String>> params) {
     String reaperBase = "http://" + host.toLowerCase() + ":" + port + "/";
@@ -100,9 +98,9 @@ public class SimpleReaperClient {
     this.reaperPort = reaperPort;
   }
 
-  public List<RepairScheduleStatus> getRepairSchedulesForCluster(String clusterName) {
+  public List<RepairScheduleStatus> getRepairSchedulesForCluster(String clusterName, Optional<Map<String, String>> params) {
     Response response = doHttpCall("GET", reaperHost, reaperPort,
-            "/repair_schedule/cluster/" + clusterName, EMPTY_PARAMS);
+            "/repair_schedule/cluster/" + clusterName, params);
     assertEquals(200, response.getStatus());
     String responseData = response.readEntity(String.class);
     return parseRepairScheduleStatusListJSON(responseData);

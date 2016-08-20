@@ -17,6 +17,7 @@ import org.eclipse.jetty.server.ServerConnector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.util.Map;
 
@@ -39,9 +40,28 @@ public class ReaperTestJettyRunner {
   private static ReaperTestJettyRunner runnerInstance;
   private static SimpleReaperClient reaperClientInstance;
 
+  public enum ConfigResource {
+    DEFAULT("cassandra-reaper-at.yaml"),
+    ACCESS_CONTROL_ENABLED("cassandra-reaper-at-access-control-enabled.yaml");
+
+    private final String resource;
+
+    ConfigResource(String resource) {
+      this.resource = resource;
+    }
+
+    public String getResourcePath() throws UnsupportedEncodingException {
+      return URLDecoder.decode(Resources.getResource(resource).getPath(), "UTF-8");
+    }
+  }
+
   public static void setup(AppContext testContext) throws Exception {
+    setup(testContext, ConfigResource.DEFAULT);
+  }
+
+  public static void setup(AppContext testContext, ConfigResource configResource) throws Exception {
     if (runnerInstance == null) {
-      String testConfigPath = URLDecoder.decode(Resources.getResource("cassandra-reaper-at.yaml").getPath(), "UTF-8");
+      String testConfigPath = configResource.getResourcePath();
       LOG.info("initializing ReaperTestJettyRunner with config in path: " + testConfigPath);
       runnerInstance = new ReaperTestJettyRunner(testConfigPath, testContext);
       runnerInstance.start();

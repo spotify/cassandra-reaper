@@ -97,3 +97,10 @@ database:
 
   # the minimum amount of time an connection must sit idle in the pool before it is eligible for eviction
   minIdleTime: 1 minute
+
+# Enables authentication according to the specified shiro configuration.
+# Remove config block althogether to disable access control
+accessControl:
+  sessionTimeout: PT30S
+  shiro:
+    iniConfigs: ["file:src/test/resources/shiro.ini"]
