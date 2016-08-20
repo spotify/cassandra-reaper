@@ -4,33 +4,26 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-
 import com.spotify.reaper.AppContext;
-import com.spotify.reaper.ReaperException;
 import com.spotify.reaper.SimpleReaperClient;
 import com.spotify.reaper.cassandra.JmxConnectionFactory;
 import com.spotify.reaper.cassandra.JmxProxy;
 import com.spotify.reaper.resources.CommonTools;
 import com.spotify.reaper.resources.view.RepairRunStatus;
 import com.spotify.reaper.resources.view.RepairScheduleStatus;
-import com.sun.jersey.api.client.ClientResponse;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.math.BigInteger;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import javax.ws.rs.core.Response;
-
-import cucumber.api.PendingException;
 import cucumber.api.java.Before;
 import cucumber.api.java.en.And;
 import cucumber.api.java.en.Given;
 import cucumber.api.java.en.Then;
 import cucumber.api.java.en.When;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.ws.rs.core.Response;
+import java.math.BigInteger;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -80,8 +73,8 @@ public class BasicSteps {
   public void callAndExpect(String httpMethod, String callPath,
                             Optional<Map<String, String>> params, Response.Status expectedStatus,
                             Optional<String> expectedDataInResponseData) {
-    ClientResponse response = ReaperTestJettyRunner.callReaper(httpMethod, callPath, params);
-    String responseData = response.getEntity(String.class);
+    Response response = ReaperTestJettyRunner.callReaper(httpMethod, callPath, params);
+    String responseData = response.readEntity(String.class);
     LOG.info("Got response data: " + responseData);
     assertEquals(expectedStatus.getStatusCode(), response.getStatus());
     if (expectedDataInResponseData.isPresent()) {
@@ -155,10 +148,10 @@ public class BasicSteps {
     params.put("owner", TestContext.TEST_USER);
     params.put("intensity", "0.9");
     params.put("scheduleDaysBetween", "1");
-    ClientResponse response =
+    Response response =
         ReaperTestJettyRunner.callReaper("POST", "/repair_schedule", Optional.of(params));
     assertEquals(Response.Status.CREATED.getStatusCode(), response.getStatus());
-    String responseData = response.getEntity(String.class);
+    String responseData = response.readEntity(String.class);
     RepairScheduleStatus schedule = SimpleReaperClient.parseRepairScheduleStatusJSON(responseData);
     TestContext.LAST_MODIFIED_ID = schedule.getId();
   }
@@ -181,10 +174,10 @@ public class BasicSteps {
     params.put("owner", TestContext.TEST_USER);
     params.put("intensity", "0.8");
     params.put("scheduleDaysBetween", "1");
-    ClientResponse response =
+    Response response =
         ReaperTestJettyRunner.callReaper("POST", "/repair_schedule", Optional.of(params));
     assertEquals(Response.Status.CREATED.getStatusCode(), response.getStatus());
-    String responseData = response.getEntity(String.class);
+    String responseData = response.readEntity(String.class);
     RepairScheduleStatus schedule = SimpleReaperClient.parseRepairScheduleStatusJSON(responseData);
     TestContext.LAST_MODIFIED_ID = schedule.getId();
   }
@@ -240,10 +233,10 @@ public class BasicSteps {
     params.put("clusterName", clusterName);
     params.put("keyspace", keyspace);
     params.put("owner", TestContext.TEST_USER);
-    ClientResponse response =
+    Response response =
         ReaperTestJettyRunner.callReaper("POST", "/repair_run", Optional.of(params));
     assertEquals(Response.Status.CREATED.getStatusCode(), response.getStatus());
-    String responseData = response.getEntity(String.class);
+    String responseData = response.readEntity(String.class);
     RepairRunStatus run = SimpleReaperClient.parseRepairRunStatusJSON(responseData);
     TestContext.LAST_MODIFIED_ID = run.getId();
   }
@@ -251,11 +244,11 @@ public class BasicSteps {
   @Then("^reaper has (\\d+) repairs for cluster called \"([^\"]*)\"$")
   public void reaper_has_repairs_for_cluster_called(int runAmount, String clusterName)
       throws Throwable {
-    ClientResponse response =
+    Response response =
         ReaperTestJettyRunner.callReaper("GET", "/repair_run/cluster/" + clusterName,
                                          EMPTY_PARAMS);
     assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    String responseData = response.getEntity(String.class);
+    String responseData = response.readEntity(String.class);
     List<RepairRunStatus> runs = SimpleReaperClient.parseRepairRunStatusListJSON(responseData);
     assertEquals(runAmount, runs.size());
   }

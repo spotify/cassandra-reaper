@@ -64,7 +64,7 @@ public class PostgresStorage implements IStorage {
     try {
       final DBIFactory factory = new DBIFactory();
       jdbi = factory.build(environment, config.getDataSourceFactory(), "postgresql");
-    } catch (ClassNotFoundException ex) {
+    } catch (RuntimeException ex) {
       LOG.error("failed creating database connection: {}", ex);
       throw new ReaperException(ex);
     }

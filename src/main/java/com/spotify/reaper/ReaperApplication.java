@@ -28,6 +28,8 @@ import com.spotify.reaper.storage.IStorage;
 import com.spotify.reaper.storage.MemoryStorage;
 import com.spotify.reaper.storage.PostgresStorage;
 
+import io.dropwizard.configuration.EnvironmentVariableSubstitutor;
+import io.dropwizard.configuration.SubstitutingSourceProvider;
 import org.apache.cassandra.repair.RepairParallelism;
 import org.eclipse.jetty.servlets.CrossOriginFilter;
 import org.joda.time.DateTimeZone;
@@ -87,6 +89,12 @@ public class ReaperApplication extends Application<ReaperApplicationConfiguratio
   @Override
   public void initialize(Bootstrap<ReaperApplicationConfiguration> bootstrap) {
     bootstrap.addBundle(new AssetsBundle("/assets/", "/webui", "index.html"));
+    bootstrap.setConfigurationSourceProvider(
+            new SubstitutingSourceProvider(
+                    bootstrap.getConfigurationSourceProvider(),
+                    new EnvironmentVariableSubstitutor()
+            )
+    );
   }
 
   @Override

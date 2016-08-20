@@ -9,7 +9,6 @@ import com.spotify.reaper.AppContext;
 import com.spotify.reaper.ReaperApplication;
 import com.spotify.reaper.ReaperApplicationConfiguration;
 import com.spotify.reaper.SimpleReaperClient;
-import com.sun.jersey.api.client.ClientResponse;
 
 import net.sourceforge.argparse4j.inf.Namespace;
 
@@ -18,12 +17,15 @@ import org.eclipse.jetty.server.ServerConnector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.URLDecoder;
 import java.util.Map;
 
 import io.dropwizard.cli.ServerCommand;
 import io.dropwizard.lifecycle.ServerLifecycleListener;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
+
+import javax.ws.rs.core.Response;
 
 /**
  * Simple Reaper application runner for testing purposes.
@@ -39,7 +41,7 @@ public class ReaperTestJettyRunner {
 
   public static void setup(AppContext testContext) throws Exception {
     if (runnerInstance == null) {
-      String testConfigPath = Resources.getResource("cassandra-reaper-at.yaml").getPath();
+      String testConfigPath = URLDecoder.decode(Resources.getResource("cassandra-reaper-at.yaml").getPath(), "UTF-8");
       LOG.info("initializing ReaperTestJettyRunner with config in path: " + testConfigPath);
       runnerInstance = new ReaperTestJettyRunner(testConfigPath, testContext);
       runnerInstance.start();
@@ -55,8 +57,8 @@ public class ReaperTestJettyRunner {
     }
   }
 
-  public static ClientResponse callReaper(String httpMethod, String urlPath,
-                                          Optional<Map<String, String>> params) {
+  public static Response callReaper(String httpMethod, String urlPath,
+                                    Optional<Map<String, String>> params) {
     assert runnerInstance != null : "service not initialized, call setup() first";
     return SimpleReaperClient.doHttpCall(httpMethod, "localhost", runnerInstance.getLocalPort(),
                                          urlPath, params);

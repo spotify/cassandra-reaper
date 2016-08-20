@@ -1,18 +1,17 @@
 package com.spotify.reaper;
 
-import com.google.common.base.Optional;
-
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Optional;
 import com.spotify.reaper.resources.view.RepairRunStatus;
 import com.spotify.reaper.resources.view.RepairScheduleStatus;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.Response;
 import java.net.URI;
 import java.net.URL;
 import java.util.List;
@@ -30,8 +29,8 @@ public class SimpleReaperClient {
 
   private static Optional<Map<String, String>> EMPTY_PARAMS = Optional.absent();
 
-  public static ClientResponse doHttpCall(String httpMethod, String host, int port, String urlPath,
-                                          Optional<Map<String, String>> params) {
+  public static Response doHttpCall(String httpMethod, String host, int port, String urlPath,
+                                    Optional<Map<String, String>> params) {
     String reaperBase = "http://" + host.toLowerCase() + ":" + port + "/";
     URI uri;
     try {
@@ -39,29 +38,26 @@ public class SimpleReaperClient {
     } catch (Exception ex) {
       throw new RuntimeException(ex);
     }
-    Client client = new Client();
-    WebResource resource = client.resource(uri);
-    LOG.info("calling (" + httpMethod + ") Reaper in resource: " + resource.getURI());
+    WebTarget target = ClientBuilder.newClient().target(uri);
+    LOG.info("calling (" + httpMethod + ") Reaper in target: " + target.getUri());
     if (params.isPresent()) {
       for (Map.Entry<String, String> entry : params.get().entrySet()) {
-        resource = resource.queryParam(entry.getKey(), entry.getValue());
+        target = target.queryParam(entry.getKey(), entry.getValue());
       }
     }
-    ClientResponse response;
-    if ("GET".equalsIgnoreCase(httpMethod)) {
-      response = resource.get(ClientResponse.class);
-    } else if ("POST".equalsIgnoreCase(httpMethod)) {
-      response = resource.post(ClientResponse.class);
-    } else if ("PUT".equalsIgnoreCase(httpMethod)) {
-      response = resource.put(ClientResponse.class);
-    } else if ("DELETE".equalsIgnoreCase(httpMethod)) {
-      response = resource.delete(ClientResponse.class);
-    } else if ("OPTIONS".equalsIgnoreCase(httpMethod)) {
-      response = resource.options(ClientResponse.class);
-    } else {
-      throw new RuntimeException("Invalid HTTP method: " + httpMethod);
+
+    return target.request().build(httpMethod, contentFor(httpMethod).orNull()).invoke();
+  }
+
+  private static Optional<Entity<String>> contentFor(String httpMethod) {
+    if ("PUT".equalsIgnoreCase(httpMethod) || "POST".equalsIgnoreCase(httpMethod)) {
+      return Optional.of(noContent());
     }
-    return response;
+    return Optional.absent();
+  }
+
+  private static Entity<String> noContent() {
+    return Entity.text("");
   }
 
   private static <T> T parseJSON(String json, TypeReference<T> ref) {
@@ -105,10 +101,10 @@ public class SimpleReaperClient {
   }
 
   public List<RepairScheduleStatus> getRepairSchedulesForCluster(String clusterName) {
-    ClientResponse response = doHttpCall("GET", reaperHost, reaperPort,
-                                         "/repair_schedule/cluster/" + clusterName, EMPTY_PARAMS);
+    Response response = doHttpCall("GET", reaperHost, reaperPort,
+            "/repair_schedule/cluster/" + clusterName, EMPTY_PARAMS);
     assertEquals(200, response.getStatus());
-    String responseData = response.getEntity(String.class);
+    String responseData = response.readEntity(String.class);
     return parseRepairScheduleStatusListJSON(responseData);
   }
 
