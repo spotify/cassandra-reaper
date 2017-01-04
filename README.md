@@ -3,16 +3,16 @@ Reaper for Apache Cassandra
 
 [![Build Status](https://travis-ci.org/thelastpickle/cassandra-reaper.svg?branch=master)](https://travis-ci.org/thelastpickle/cassandra-reaper)
 
-*Note: This repo is a fork from the original Reaper project, created by the awesome folks at Spotify.  The WebUI has been merged in with support for incremental repairs added.* 
+*Note: This repo is a fork from the original Reaper project, created by the awesome folks at Spotify.  The WebUI has been merged in with support for incremental repairs added.*
 
 Reaper is a centralized, stateful, and highly configurable tool for running Apache Cassandra
 repairs against single or multi-site clusters.
 
-The current version supports running Apache Cassandra cluster repairs in a segmented manner, 
+The current version supports running Apache Cassandra cluster repairs in a segmented manner,
 opportunistically running multiple parallel repairs at the same time on different nodes
 within the cluster. Basic repair scheduling functionality is also supported.
 
-Reaper comes with a GUI, which if you're running in local mode can be at http://localhost:8080/webui/ 
+Reaper comes with a GUI, which if you're running in local mode can be at http://localhost:8080/webui/
 
 Please see the [Issues](https://github.com/thelastpickle/cassandra-reaper/issues) section for more
 information on planned development, and known issues.
@@ -45,7 +45,7 @@ as the first and only argument. You can also use the provided `bin/cassandra-rea
 to run the service.
 
 When using database based storage, you must setup a PostgreSQL database yourself and configure
-Reaper to use it, or use an embedded H2 database (set the appropriate configuration in the yaml file). 
+Reaper to use it, or use an embedded H2 database (set the appropriate configuration in the yaml file).
 The schema will get initialized/upgraded upon startup by FlyWay.
 
 When using cassandra based storage, you must setup an Apache Cassandra database yourself and configure
@@ -91,7 +91,7 @@ Make sure to specify the correct credentials in your JDBC settings in `cassandra
 comment/uncomment the H2 settings and modify the path as needed or use the `cassandra-reaper-h2.yaml` as a base.
 
 For persistent Apache Cassandra storage, you need to set `storageType: cassandra` in the config file.
-You'll also need to fill in the connection details to your Apache Cassandra cluster used to store the Reaper schema (reaper_db by default), in the `cassandra: ` section of the yaml file. 
+You'll also need to fill in the connection details to your Apache Cassandra cluster used to store the Reaper schema (reaper_db by default), in the `cassandra: ` section of the yaml file.
 
 A sample yaml file is available in the `resource` directory for each storage backend :  
 * cassandra-reaper-memory.yaml
@@ -137,7 +137,7 @@ The Reaper service specific configuration values are:
 
 * incrementalRepair:
 
-  Incremental repair is a boolean value (true | false). 
+  Incremental repair is a boolean value (true | false).
   Note that this is only supported with the PARALLEL repairParallelism setting.
   For more details in incremental repair, please refer to the following article
   http://www.datastax.com/dev/blog/more-efficient-repairs
@@ -193,12 +193,12 @@ The Reaper service specific configuration values are:
 * autoScheduling:
 
   Optional setting to automatically setup repair schedules for all non-system keyspaces in a cluster.
-  If enabled, adding a new cluster will automatically setup a schedule repair 
+  If enabled, adding a new cluster will automatically setup a schedule repair
   for each keyspace. Cluster keyspaces are monitored based on a configurable frequency,
   so that adding or removing a keyspace will result in adding / removing the corresponding scheduled repairs.
-   
+
 * cassandra:
-   
+
    Optional setting to provide cassandra store when ```storageType: cassandra```
    The sample here shows setup using plain authentication with ssl.
    ```
@@ -213,9 +213,9 @@ The Reaper service specific configuration values are:
      ssl:
        type: jdk
    ```
-   Refer to resource/cassandra-reaper-cassandra-ssl.yaml for cassandra with Auth 
-   
-   
+   Refer to resource/cassandra-reaper-cassandra-ssl.yaml for cassandra with Auth
+
+
 Notice that in the *server* section of the configuration, if you want to bind the service
 to all interfaces, use value "0.0.0.0", or just leave the *bindHost* line away completely.
 Using "*" as bind value won't work.
@@ -226,7 +226,7 @@ Clusters with closed cross DC JMX ports
 For security reasons, it is possible that Reaper will be able to access only a single DC nodes through JMX.
 The *allowUnreachableNodes* parameter in cassandra-reaper.yaml must then be set to true in order for Reaper to control the repair process through the reachable nodes only.
 Limitations of this setup are:  
- 
+
 * All keyspaces must be replicated on the reachable DC using NetworkTopologyStrategy
 * Reaper won't be able to check the unreachable DC nodes for pending compactions or running repairs, which disables repair overload prevention
 
@@ -359,15 +359,15 @@ Source code for all the REST resources can be found from package com.spotify.rea
 Building and running Reaper
 ------------------------------------
 
-To build Reaper without rebuilding the UI, run the following command : 
+To build Reaper without rebuilding the UI, run the following command :
 
 ```mvn clean package```
 
-To only regenerate the UI (requires npm and bower) : 
+To only regenerate the UI (requires npm and bower) :
 
 ```mvn generate-sources -Pbuild-ui```
 
-To rebuild both the UI and Reaper : 
+To rebuild both the UI and Reaper :
 
 ```mvn clean package -Pbuild-ui```
 
@@ -384,3 +384,19 @@ After modifying the `resource/cassandra-reaper.yaml` config file, Reaper can be 
 Once started, the UI can be accessed through : `http://127.0.0.1:8080/webui/`
 
 Reaper can also be accessed using the REST API exposed on port 8080, or using the command line tool `bin/spreaper`
+
+Doing a Release
+------------------------------------
+
+1. Go to the root of the cassandra-reaper project on your local Git clone.
+2. Run `mvn clean verify`.
+3. Commit the changes with message "release version X.Y.Z".
+4. Run `git tag -am X.Y.Z X.Y.Z`. Example: `git tag -am 0.3.0 0.3.0`.
+5. Run `git push`.
+6. Run `git push --tags`.
+7. (Optional) Before building the package, change the version in `pom.xml` from `0.0.0-SNAPSHOT`
+   to X.Y.Z. We keep the version string unchanged in this project. The best way to do this is
+   as part of the build in the next step. It can extract the tag using `git describe --abbrev=0`.
+8. Make a (release) build of the package, if required. For example start a Jenkins build deploy.
+9. Deploy the released packages (there's cassandra-reaper and cassandra-reaper-cli).
+10. Send a release note to users.
