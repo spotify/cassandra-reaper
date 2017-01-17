@@ -86,7 +86,7 @@ public class ReaperApplication extends Application<ReaperApplicationConfiguratio
    */
   @Override
   public void initialize(Bootstrap<ReaperApplicationConfiguration> bootstrap) {
-    bootstrap.addBundle(new AssetsBundle("/assets/", "/webui", "index.html"));
+    bootstrap.addBundle(new AssetsBundle("/assets", "/webui", "index.html"));
   }
 
   @Override
