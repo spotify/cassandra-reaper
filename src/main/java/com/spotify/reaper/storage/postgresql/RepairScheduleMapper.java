@@ -29,9 +29,9 @@ public class RepairScheduleMapper implements ResultSetMapper<RepairSchedule> {
 
   @Override
   public RepairSchedule map(int index, ResultSet r, StatementContext ctx) throws SQLException {
-    
+
     Long[] runHistoryLong = new Long[0];
-    
+
     Integer[] runHistory = null;
     Array av = r.getArray("run_history");
     if(null != av) {
@@ -42,15 +42,15 @@ public class RepairScheduleMapper implements ResultSetMapper<RepairSchedule> {
         Object[] ol = (Object[])obj;
         runHistory = Arrays.copyOf(ol, ol.length, Integer[].class);
       }
-      
+
       if (null != runHistory && runHistory.length > 0) {
         runHistoryLong = new Long[runHistory.length];
         for (int i = 0; i < runHistory.length; i++) {
           runHistoryLong[i] = runHistory[i].longValue();
         }
       }
-    }  
-    
+    }
+
     String stateStr = r.getString("state");
     // For temporary backward compatibility reasons, supporting RUNNING state as ACTIVE.
     if ("RUNNING".equalsIgnoreCase(stateStr)) {
@@ -65,7 +65,7 @@ public class RepairScheduleMapper implements ResultSetMapper<RepairSchedule> {
         RepairRunMapper.getDateTimeOrNull(r, "next_activation"),
         ImmutableList.copyOf(runHistoryLong),
         r.getInt("segment_count"),
-        RepairParallelism.fromName(r.getString("repair_parallelism")),
+        RepairParallelism.fromName(r.getString("repair_parallelism").toLowerCase().replace("datacenter_aware", "dc_parallel")),
         r.getDouble("intensity"),
         RepairRunMapper.getDateTimeOrNull(r, "creation_time"))
         .owner(r.getString("owner"))
