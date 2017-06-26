@@ -15,6 +15,8 @@ package com.spotify.reaper.resources.view;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.spotify.reaper.core.RepairRun;
 import com.spotify.reaper.core.RepairUnit;
 import com.spotify.reaper.resources.CommonTools;
@@ -75,6 +77,8 @@ public class RepairRunStatus {
   private int totalSegments;
 
   @JsonProperty("repair_parallelism")
+  @JsonSerialize(using = RepairParallelismSerializer.class)
+  @JsonDeserialize(using = RepairParallelismDeserializer.class)
   private RepairParallelism repairParallelism;
 
   @JsonProperty("segments_repaired")
