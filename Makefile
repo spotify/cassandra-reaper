@@ -8,4 +8,4 @@ prepare-for-release: update-pom-version update-changelog
 
 prepare-for-release: debian-prepare-for-release
 
-include jenkins.mk
+include cicd.mk
