@@ -65,6 +65,8 @@ class ReaperCaller(object):
             r = requests.post(the_url, params=params)
         elif http_method == 'PUT':
             r = requests.put(the_url, params=params)
+        elif http_method == 'DELETE':
+            r = requests.delete(the_url, params=params)
         else:
             assert False, "invalid HTTP method: {0}".format(http_method)
         log.info("HTTP %s return code %s with content of length %s",
