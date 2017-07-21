@@ -567,7 +567,7 @@ class ReaperCLI(object):
             extra_arguments=_arguments_for_delete_schedule
         )
         print "# Deleting a repair schedule with id: {0}".format(args.schedule_id)
-        reaper.put("repair_schedule/{0}".format(args.schedule_id), owner=args.owner)
+        reaper.delete("repair_schedule/{0}".format(args.schedule_id), owner=args.owner)
         print "# Repair schedule '{0}' deleted".format(args.schedule_id)
 
 
