@@ -95,6 +95,15 @@ public class SchedulingManager extends TimerTask {
         LOG.error("SchedulingManager failed. Exiting JVM.");
         System.exit(1);
       }
+    } catch (Throwable throwable) {
+      LOG.error("failed managing schedule for run with id: {}", lastId);
+      LOG.error("catch throwable", throwable);
+      try {
+        assert false : "if assertions are enabled then exit the jvm";
+      } catch (AssertionError ae) {
+        LOG.error("SchedulingManager failed. Exiting JVM.");
+        System.exit(1);
+      }
     }
   }
 
