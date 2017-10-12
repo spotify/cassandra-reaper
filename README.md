@@ -1,3 +1,7 @@
+**WARNING: This project has been taken over by the awesome folks at The Last Pickle, and is now continued here: https://github.com/thelastpickle/cassandra-reaper**
+
+**All your issues and PRs should be submitted over there now**
+
 cassandra-reaper
 ================
 
