@@ -1,0 +1,2 @@
+bin/cassandra-reaper usr/bin
+src/server/target/cassandra-reaper*.jar usr/share/cassandra-reaper/
