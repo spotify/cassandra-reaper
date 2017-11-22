@@ -123,6 +123,24 @@ public class RepairSchedule {
     return new Builder(this);
   }
 
+  @Override
+  public String toString() {
+    return "RepairSchedule{"
+        + "id=" + id
+        + ", repairUnitId=" + repairUnitId
+        + ", state=" + state
+        + ", daysBetween=" + daysBetween
+        + ", nextActivation=" + nextActivation
+        + ", runHistory=" + runHistory
+        + ", segmentCount=" + segmentCount
+        + ", repairParallelism=" + repairParallelism
+        + ", intensity=" + intensity
+        + ", creationTime=" + creationTime
+        + ", owner='" + owner + '\''
+        + ", pauseTime=" + pauseTime
+        + '}';
+  }
+
   public enum State {
     ACTIVE,
     PAUSED,

@@ -139,6 +139,9 @@ public final class SchedulingManager extends TimerTask {
 
                   RepairSchedule latestSchedule = context.storage.getRepairSchedule(schedule.getId()).get();
 
+                  LOG.debug("schedule_: {}", schedule_);
+                  LOG.debug("schedule: {}", schedule);
+                  LOG.debug("latestSchedule: {}", latestSchedule);
                   if (equal(schedule, latestSchedule)) {
                       
                     boolean result = context.storage.updateRepairSchedule(
